@@ -1,18 +1,28 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../supabase";
-import DatePicker from "react-datepicker"; // Importing a date picker
-import "react-datepicker/dist/react-datepicker.css";
+import DatePicker from "react-datepicker";
+import { Dialog, Transition } from "@headlessui/react";
+import { Fragment } from "react";
+import "react-datepicker/dist/react-datepicker.css"; // Importing CSS for date picker
 
 const ReservationList = () => {
   const [reservations, setReservations] = useState([]);
   const [filteredReservations, setFilteredReservations] = useState([]); // To store filtered reservations
-  const [searchQuery, setSearchQuery] = useState(""); // State for search query
-  const [filterStartDate, setFilterStartDate] = useState(null); // State for start date filter
-  const [filterEndDate, setFilterEndDate] = useState(null); // State for end date filter
+  const [selectedReservation, setSelectedReservation] = useState(null); // For editing
+  const [petInfo, setPetInfo] = useState({
+    pet_name: "",
+    dietary_requirements: "",
+    special_care_instructions: "",
+    medical_notes: "",
+  }); // Default pet info
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false); // For controlling edit modal
+  const [searchQuery, setSearchQuery] = useState(""); // For search query
+  const [filterStartDate, setFilterStartDate] = useState(null); // For start date filter
+  const [filterEndDate, setFilterEndDate] = useState(null); // For end date filter
 
   // Fetch reservations from Supabase
   const fetchReservations = async () => {
-    const { data, error } = await supabase.from("reservations").select("*"); // Select all reservations
+    const { data, error } = await supabase.from("reservations").select("*");
 
     if (error) {
       console.error("Error fetching reservations:", error.message);
@@ -22,11 +32,52 @@ const ReservationList = () => {
     }
   };
 
-  // Handle confirming a reservation
+  // Fetch pet information for the selected reservation
+  // Fetch pet information for the selected kennel
+  const fetchPetInformation = async (kennelId) => {
+    const { data, error } = await supabase
+      .from("pet_information") // Corrected table name
+      .select("*")
+      .eq("kennel_id", kennelId); // Ensure you're filtering by the correct ID
+
+    if (error) {
+      console.error("Error fetching pet information:", error.message);
+    } else if (data.length > 0) {
+      setPetInfo(data[0]); // Set the fetched data
+    } else {
+      setPetInfo({
+        pet_name: "",
+        dietary_requirements: "",
+        special_care_instructions: "",
+        medical_notes: "",
+      }); // Reset if no data is found
+    }
+  };
+
+  // Save updated pet information to Supabase
+  const savePetInformation = async () => {
+    const { error } = await supabase.from("pet_information").upsert({
+      reservation_id: selectedReservation.id,
+      kennel_id: selectedReservation.kennel_ids[0], // Assuming one kennel for simplicity
+      pet_name: petInfo.pet_name,
+      dietary_requirements: petInfo.dietary_requirements,
+      special_care_instructions: petInfo.special_care_instructions,
+      medical_notes: petInfo.medical_notes,
+    }); // Upsert to insert or update
+
+    if (error) {
+      console.error("Error saving pet information:", error.message);
+    } else {
+      setIsEditModalOpen(false); // Close the modal after saving
+      fetchReservations(); // Refresh the reservations list
+    }
+  };
+
+  // Confirm a reservation
   const confirmReservation = async (reservation) => {
     const { error } = await supabase
       .from("reservations")
-      .update({ status: "confirmed" }) // Set to 'confirmed'
+      .update({ status: "confirmed" })
       .eq("id", reservation.id);
 
     if (error) {
@@ -46,11 +97,11 @@ const ReservationList = () => {
     }
   };
 
-  // Handle canceling a reservation
+  // Cancel a reservation
   const cancelReservation = async (reservation) => {
     const { error } = await supabase
       .from("reservations")
-      .update({ status: "canceled" }) // Set to 'canceled'
+      .update({ status: "canceled" })
       .eq("id", reservation.id);
 
     if (error) {
@@ -69,19 +120,19 @@ const ReservationList = () => {
       fetchReservations(); // Refresh the list after update
     }
   };
-
   // Search reservations by customer name
   const handleSearch = (query) => {
-    setSearchQuery(query);
+    setSearchQuery(query); // Store the query in the state
     if (query) {
-      const lowerQuery = query.toLowerCase();
+      const lowerQuery = query.toLowerCase(); // Convert the query to lowercase for case-insensitive matching
       setFilteredReservations(
-        reservations.filter((reservation) =>
-          reservation.customer_name.toLowerCase().includes(lowerQuery)
+        reservations.filter(
+          (reservation) =>
+            reservation.customer_name.toLowerCase().includes(lowerQuery) // Filter reservations by name
         )
       );
     } else {
-      setFilteredReservations(reservations);
+      setFilteredReservations(reservations); // Reset to all reservations if query is empty
     }
   };
 
@@ -98,6 +149,13 @@ const ReservationList = () => {
     } else {
       setFilteredReservations(reservations); // Reset to all reservations
     }
+  };
+
+  // Open edit modal for a reservation
+  const openEditModal = (reservation) => {
+    setSelectedReservation(reservation); // Set the selected reservation
+    fetchPetInformation(reservation.id); // Fetch associated pet information
+    setIsEditModalOpen(true); // Open the modal
   };
 
   useEffect(() => {
@@ -207,11 +265,110 @@ const ReservationList = () => {
                     Cancel
                   </button>
                 )}
+                {reservation.status === "confirmed" && (
+                  <button
+                    className="bg-blue-500 text-white py-1 px-2 rounded-md hover:bg-blue-600 ml-2"
+                    onClick={() => openEditModal(reservation)}
+                  >
+                    Edit
+                  </button>
+                )}
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+
+      {/* Edit modal for pet information */}
+      <Transition
+        show={isEditModalOpen}
+        as={Fragment}
+        enter="transition-opacity duration-300"
+        enterFrom="opacity-0"
+        enterTo="opacity-100"
+        leave="transition-opacity duration-300"
+        leaveFrom="opacity-100"
+        leaveTo="opacity-0"
+      >
+        <Dialog
+          as="div"
+          className="fixed inset-0 z-10 overflow-y-auto"
+          onClose={() => setIsEditModalOpen(false)}
+        >
+          <div className="flex min-h-screen items-center justify-center p-4">
+            <Dialog.Panel className="rounded-lg bg-white p-8 shadow-xl">
+              <Dialog.Title className="text-lg font-bold">
+                Edit Pet Information
+              </Dialog.Title>
+
+              <div className="mt-4">
+                <label className="block font-semibold">Pet Name</label>
+                <input
+                  type="text"
+                  className="w-full p-2 border rounded-md"
+                  value={petInfo.pet_name}
+                  onChange={(e) =>
+                    setPetInfo({ ...petInfo, pet_name: e.target.value })
+                  }
+                />
+              </div>
+
+              <div className="mt-4">
+                <label className="block font-semibold">
+                  Dietary Requirements
+                </label>
+                <textarea
+                  className="w-full p-2 border rounded-md"
+                  value={petInfo.dietary_requirements}
+                  onChange={(e) =>
+                    setPetInfo({
+                      ...petInfo,
+                      dietary_requirements: e.target.value,
+                    })
+                  }
+                />
+              </div>
+
+              <div className="mt-4">
+                <label className="block font-semibold">
+                  Special Care Instructions
+                </label>
+                <textarea
+                  className="w-full p-2 border rounded-md"
+                  value={petInfo.special_care_instructions}
+                  onChange={(e) =>
+                    setPetInfo({
+                      ...petInfo,
+                      special_care_instructions: e.target.value,
+                    })
+                  }
+                />
+              </div>
+
+              <div className="mt-4">
+                <label className="block font-semibold">Medical Notes</label>
+                <textarea
+                  className="w-full p-2 border rounded-md" // Corrected element type and class
+                  value={petInfo.medical_notes} // Correct data binding
+                  onChange={(e) =>
+                    setPetInfo({ ...petInfo, medical_notes: e.target.value })
+                  } // Update the state with the new value
+                />
+              </div>
+
+              <div className="mt-6 flex justify-end">
+                <button
+                  type="button"
+                  className="bg-blue-500 text-white px-4 py-2 rounded-md"
+                  onClick={savePetInformation}
+                >
+                  Save
+                </button>
+              </div>
+            </Dialog.Panel>
+          </div>
+        </Dialog>
+      </Transition>
     </div>
   );
 };
