@@ -4,8 +4,9 @@ import Sidebar from './components/Sidebar';
 import KennelGrid from './components/KennelGrid';
 import ReservationForm from './components/ReservationForm';
 import ReservationList from './components/ReservationList';
-import FeedingSchedule from './components/FeedingSchedule'; // New Feeding Schedule component
-import FeedingLogHistory from './components/FeedingLogHistory'; // New Feeding Log History component
+import FeedingSchedule from './components/FeedingSchedule';
+import FeedingLogHistory from './components/FeedingLogHistory';
+import CustomerManagement from './components/CustomerManagement'; // New component for customer management
 
 const App = () => {
   return (
@@ -15,7 +16,7 @@ const App = () => {
         <Sidebar />
 
         {/* Main content area */}
-        <div className="flex-1 p-4">
+        <div className="flex-1 p-4 overflow-y-auto">
           <Routes>
             {/* Route for KennelGrid */}
             <Route path="/" element={<KennelGrid />} />
@@ -31,6 +32,9 @@ const App = () => {
 
             {/* Route for Feeding Log History */}
             <Route path="/feeding-log-history" element={<FeedingLogHistory />} />
+
+            {/* Route for Customer Management */}
+            <Route path="/customers" element={<CustomerManagement />} /> {/* New route for customer management */}
           </Routes>
         </div>
       </div>

@@ -31,35 +31,36 @@ const ReservationForm = () => {
   };
 
   // Handle the creation of a reservation
-  const createReservation = async () => {
-    const { error } = await supabase.from("reservations").insert({
-      customer_name: customerName,
-      customer_phone: customerPhone,
-      customer_email: customerEmail,
-      customer_address: customerAddress,
-      start_date: startDate,
-      end_date: endDate,
-      status: "pending", // Default status
-      kennel_ids: selectedKennels.map((k) => k.id),
-    });
+const createReservation = async () => {
+  const { error } = await supabase.from("reservations").insert({
+    customer_name: customerName,
+    customer_phone: customerPhone,
+    customer_email: customerEmail,
+    customer_address: customerAddress,
+    start_date: startDate,
+    end_date: endDate,
+    status: "pending", // Default status
+    kennel_ids: selectedKennels.map((k) => k.id), // IDs of reserved kennels
+  });
 
-    if (error) {
-      console.error("Error creating reservation:", error.message);
-    } else {
-      // Update the kennels status in Supabase to 'reserved'
-      await Promise.all(
-        selectedKennels.map(async (kennel) => {
-          await supabase
-            .from("kennels")
-            .update({ status: "reserved" })
-            .eq("id", kennel.id);
-        })
-      );
+  if (error) {
+    console.error("Error creating reservation:", error.message);
+  } else {
+    // Update the kennel status to 'reserved' in Supabase
+    await Promise.all(
+      selectedKennels.map(async (kennel) => {
+        await supabase
+          .from("kennels")
+          .update({ status: "reserved" }) // Set kennel status to 'reserved'
+          .eq("id", kennel.id); // Update specific kennel
+      })
+    );
 
-      // Open the dialog box to confirm successful reservation
-      setIsDialogOpen(true);
-    }
-  };
+    // Open the dialog box to confirm successful reservation
+    setIsDialogOpen(true);
+  }
+};
+
 
   // When the start date changes, fetch available kennels
   useEffect(() => {
