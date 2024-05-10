@@ -88,6 +88,17 @@ const ReservationList = () => {
     }
   };
 
+  const checkoutReservation = async (reservation) => {
+    const { error } = await supabase
+      .from("reservations")
+      .update({ status: "checkout" })
+      .eq("id", reservation.id);
+
+    if (!error) {
+      fetchReservations(); // Refresh the list after update
+    }
+  };
+
   useEffect(() => {
     fetchReservations();
   }, []);
@@ -104,9 +115,8 @@ const ReservationList = () => {
           if (query) {
             const lowerQuery = query.toLowerCase();
             setFilteredReservations(
-              reservations.filter(
-                (reservation) =>
-                  reservation.customer_name.toLowerCase().includes(lowerQuery)
+              reservations.filter((reservation) =>
+                reservation.customer_name.toLowerCase().includes(lowerQuery)
               )
             );
           } else {
@@ -135,6 +145,7 @@ const ReservationList = () => {
           setSelectedReservation(reservation);
           setIsEditModalOpen(true);
         }}
+        onCheckout={checkoutReservation}
       />
       {isEditModalOpen && (
         <ReservationEditModal

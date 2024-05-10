@@ -1,4 +1,4 @@
-import React from "react";
+
 import { Link, useLocation } from "react-router-dom";
 
 const Sidebar = () => {
@@ -74,7 +74,6 @@ const Sidebar = () => {
               Feeding Log History
             </Link>
           </li>
-          {/* Add the new Customers button */}
           <li>
             <Link
               to="/customers"
@@ -85,6 +84,18 @@ const Sidebar = () => {
               }`}
             >
               Customers
+            </Link>
+          </li>
+          <li>
+            <Link
+              to="/dashboard" // Link to the new Dashboard route
+              className={`block p-2 rounded-md ${
+                location.pathname === "/dashboard"
+                  ? "bg-gray-700"
+                  : "hover:bg-gray-700"
+              }`}
+            >
+              Dashboard
             </Link>
           </li>
         </ul>

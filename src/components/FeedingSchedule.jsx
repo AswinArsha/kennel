@@ -1,21 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { supabase } from '../supabase'; // Import Supabase client
-import DatePicker from 'react-datepicker'; // Date picker component
-import 'react-datepicker/dist/react-datepicker.css'; // Import CSS for date picker
-import { Dialog, Transition } from '@headlessui/react'; // For modal dialog
-import { Fragment } from 'react'; // Fragment for React transitions
+import { useState, useEffect } from "react";
+import { supabase } from "../supabase"; // Import Supabase client
+import DatePicker from "react-datepicker"; // Date picker component
+import "react-datepicker/dist/react-datepicker.css"; // Import CSS for date picker
+import { Dialog, Transition } from "@headlessui/react"; // For modal dialog
+import { Fragment } from "react"; // Fragment for React transitions
 
 // Utility function to convert Date to a string in the format 'yyyy-mm-dd'
 const formatDate = (date) => {
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 };
 
 const FeedingSchedule = () => {
   const [selectedDate, setSelectedDate] = useState(null); // State for date selection
-  const [feedingTime, setFeedingTime] = useState('morning'); // Default feeding time
+  const [feedingTime, setFeedingTime] = useState("morning"); // Default feeding time
   const [occupiedKennels, setOccupiedKennels] = useState([]); // Occupied kennels
   const [feedingStatus, setFeedingStatus] = useState({}); // Store feeding status by kennel ID
   const [isDialogOpen, setIsDialogOpen] = useState(false); // For dialog box after submission
@@ -23,12 +23,12 @@ const FeedingSchedule = () => {
   // Fetch occupied kennels based on the selected date
   const fetchOccupiedKennels = async (date) => {
     const { data, error } = await supabase
-      .from('kennels')
-      .select('*')
-      .eq('status', 'occupied'); // Fetch only occupied kennels
+      .from("kennels")
+      .select("*")
+      .eq("status", "occupied"); // Fetch only occupied kennels
 
     if (error) {
-      console.error('Error fetching kennels:', error.message);
+      console.error("Error fetching kennels:", error.message);
     } else {
       setOccupiedKennels(data); // Set the state with the list of occupied kennels
     }
@@ -45,10 +45,12 @@ const FeedingSchedule = () => {
       eaten: feedingStatus[kennel.id],
     }));
 
-    const { error } = await supabase.from('feeding_schedule').insert(feedingRecords);
+    const { error } = await supabase
+      .from("feeding_schedule")
+      .insert(feedingRecords);
 
     if (error) {
-      console.error('Error inserting feeding status:', error.message);
+      console.error("Error inserting feeding status:", error.message);
     } else {
       setIsDialogOpen(true); // Open dialog to indicate successful submission
     }
@@ -74,15 +76,14 @@ const FeedingSchedule = () => {
           dateFormat="yyyy/MM/dd"
           placeholderText="Select date"
         />
-        
+
         <select
           className="p-2 border rounded-md"
           value={feedingTime}
           onChange={(e) => setFeedingTime(e.target.value)}
         >
           <option value="morning">Morning</option>
-          <option value="noon">Noon</option>
-          <option value="night">Night</option>
+          <option value="noon">Noon</option> {/* Removed "night" option */}
         </select>
       </div>
 
@@ -95,7 +96,7 @@ const FeedingSchedule = () => {
               <div
                 key={kennel.id}
                 className={`p-3 rounded-md ${
-                  feedingStatus[kennel.id] ? 'bg-green-500' : 'bg-gray-200'
+                  feedingStatus[kennel.id] ? "bg-green-500" : "bg-gray-200"
                 }`}
               >
                 <label className="flex items-center gap-2">
@@ -141,11 +142,13 @@ const FeedingSchedule = () => {
         <Dialog
           as="div"
           className="fixed inset-0 z-10 overflow-y-auto"
-          onClose={() => setIsDialogOpen(false)} // Close dialog when user interacts
+          onClose={() => setIsDialogOpen(false)}
         >
           <div className="flex min-h-screen items-center justify-center p-4">
             <Dialog.Panel className="rounded-lg bg-white p-8 shadow-2xl">
-              <Dialog.Title className="text-lg font-bold">Feeding Status Submitted</Dialog.Title>
+              <Dialog.Title className="text-lg font-bold">
+                Feeding Status Submitted
+              </Dialog.Title>
               <Dialog.Description className="mt-2 text-sm text-gray-500">
                 The feeding status has been successfully submitted.
               </Dialog.Description>

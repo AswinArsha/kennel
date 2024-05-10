@@ -10,37 +10,35 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
     kennel_numbers: [],
     pets: [],
   });
-  const [customerKennelIds, setCustomerKennelIds] = useState([]);
   const [filterDate, setFilterDate] = useState(null);
   const [filteredFeedings, setFilteredFeedings] = useState([]);
+
   useEffect(() => {
     const fetchCustomerDetail = async () => {
       if (customer) {
-        const { data, error } = await supabase
+        const { data: reservation, error } = await supabase
           .from("reservations")
           .select("*")
-          .eq("id", customer.id)
+          .eq("kennel_ids", `{${customer.id}}`) // Filter by kennel ID
           .single();
-  
+
         if (error) {
-          console.error("Error fetching customer details:", error.message);
+          console.error("Error fetching reservation details:", error.message);
         } else {
           const { data: pets, error: petError } = await supabase
             .from("pet_information")
             .select("*, kennel_id (id, kennel_number)")
-            .eq("reservation_id", customer.id);
-  
+            .eq("kennel_id", customer.id); // Filter by kennel ID
+
           if (petError) {
             console.error("Error fetching pets:", petError.message);
           } else {
             const kennelNumbers = pets.map((pet) => pet.kennel_id.kennel_number);
-            const kennelIds = pets.map((pet) => pet.kennel_id.id);
-            setCustomerKennelIds(kennelIds);
             setCustomerDetail({
-              customer_name: data.customer_name,
-              customer_phone: data.customer_phone,
-              customer_email: data.customer_email,
-              customer_address: data.customer_address,
+              customer_name: reservation.customer_name,
+              customer_phone: reservation.customer_phone,
+              customer_email: reservation.customer_email,
+              customer_address: reservation.customer_address,
               pets,
               kennel_numbers: kennelNumbers,
             });
@@ -48,22 +46,41 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
         }
       }
     };
-  
+
     fetchCustomerDetail();
   }, [customer]);
+
   useEffect(() => {
     const fetchFeedingSchedule = async () => {
-      if (filterDate) {
+      if (filterDate && customer) {
         const { data, error } = await supabase
           .from("feeding_schedule")
           .select("*")
           .eq("feeding_date", filterDate)
-          .in("kennel_id", customerKennelIds);
+          .eq("kennel_id", customer.id);
 
         if (error) {
           console.error("Error fetching feeding schedule:", error.message);
         } else {
-          setFilteredFeedings(data);
+          const groupedData = data.reduce((acc, entry) => {
+            const key = `${entry.kennel_id}-${entry.feeding_date}`;
+            if (!acc[key]) {
+              acc[key] = {
+                kennel_id: entry.kennel_id,
+                feeding_date: entry.feeding_date,
+                morning_fed: false,
+                noon_fed: false,
+              };
+            }
+            if (entry.feeding_time === 'morning') {
+              acc[key].morning_fed = entry.fed;
+            } else if (entry.feeding_time === 'noon') {
+              acc[key].noon_fed = entry.fed;
+            }
+            return acc;
+          }, {});
+
+          setFilteredFeedings(Object.values(groupedData));
         }
       } else {
         setFilteredFeedings([]);
@@ -71,7 +88,7 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
     };
 
     fetchFeedingSchedule();
-  }, [filterDate, customerKennelIds]);
+  }, [filterDate, customer]);
 
   return (
     <div
@@ -82,7 +99,7 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
       <div className="relative mx-auto max-w-7xl">
         <div className="bg-white rounded-lg shadow-lg p-8">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold">Customer Details</h2>
+            <h2 className="text-2xl font-bold">All Details</h2>
             <button
               className="text-gray-600 hover:text-gray-900 focus:outline-none"
               onClick={onClose}
@@ -181,23 +198,33 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
             <table className="w-full border-collapse">
               <thead>
                 <tr>
-                 
+                  <th className="p-3 text-left border">Kennel Number</th>
                   <th className="p-3 text-left border">Feeding Date</th>
-                  <th className="p-3 text-left border">Feeding Time</th>
-                  <th className="p-3 text-left border">Fed</th>
-                  
+                  <th className="p-3 text-left border">Fed (Morning)</th>
+                  <th className="p-3 text-left border">Fed (Noon)</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredFeedings.map((feeding) => (
-                  <tr key={feeding.id} className="hover:bg-gray-100">
-                
+                {filteredFeedings.map((feeding, index) => (
+                  <tr key={index} className="hover:bg-gray-100">
+                    <td className="p-3 border">{feeding.kennel_id}</td>
                     <td className="p-3 border">
                       {new Date(feeding.feeding_date).toLocaleDateString()}
                     </td>
-                    <td className="p-3 border">{feeding.feeding_time}</td>
-                    <td className="p-3 border">{feeding.fed ? "Yes" : "No"}</td>
-                
+                    <td className="p-3 border">
+                      {feeding.morning_fed ? (
+                        <span className="bg-green-500 text-white p-1 rounded">Yes</span>
+                      ) : (
+                        <span className="bg-red-500 text-white p-1 rounded">No</span>
+                      )}
+                    </td>
+                    <td className="p-3 border">
+                      {feeding.noon_fed ? (
+                        <span className="bg-green-500 text-white p-1 rounded">Yes</span>
+                      ) : (
+                        <span className="bg-red-500 text-white p-1 rounded">No</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -208,4 +235,5 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
     </div>
   );
 };
+
 export default CustomerDetailDialog;

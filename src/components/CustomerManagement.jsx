@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import  { useState } from 'react';
+
 import CustomerTable from './CustomerTable'; // Customer table component
 import CustomerDetailDialog from './CustomerDetailDialog'; // Customer detail dialog
 
