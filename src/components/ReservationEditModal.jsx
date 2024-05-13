@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import  { useEffect, useState } from "react";
 import PropTypes from "prop-types"; // Import PropTypes for prop validation
 import { supabase } from "../supabase";
 import { Dialog, Transition } from "@headlessui/react";

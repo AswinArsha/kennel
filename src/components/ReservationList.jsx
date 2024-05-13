@@ -103,40 +103,51 @@ const ReservationList = () => {
     fetchReservations();
   }, []);
 
+  const handleFilterStartDateChange = (date) => {
+    setFilterStartDate(date);
+  };
+
+  const handleFilterEndDateChange = (date) => {
+    setFilterEndDate(date);
+  };
+  const handleDateFilter = (startDate, endDate) => {
+    if (startDate && endDate) {
+      setFilteredReservations(
+        reservations.filter(
+          (reservation) =>
+            new Date(reservation.start_date) >= startDate &&
+            new Date(reservation.end_date) <= endDate.setHours(23, 59, 59, 999) // Include reservations with end date equal to the selected end date
+        )
+      );
+    } else {
+      setFilteredReservations(reservations);
+    }
+  };
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-4">Reservation List</h2>
-      <ReservationFilter
-        searchQuery={searchQuery}
-        filterStartDate={filterStartDate}
-        filterEndDate={filterEndDate}
-        onSearchChange={(query) => {
-          setSearchQuery(query);
-          if (query) {
-            const lowerQuery = query.toLowerCase();
-            setFilteredReservations(
-              reservations.filter((reservation) =>
-                reservation.customer_name.toLowerCase().includes(lowerQuery)
-              )
-            );
-          } else {
-            setFilteredReservations(reservations);
-          }
-        }}
-        onDateFilter={() => {
-          if (filterStartDate && filterEndDate) {
-            setFilteredReservations(
-              reservations.filter(
-                (reservation) =>
-                  new Date(reservation.start_date) >= filterStartDate &&
-                  new Date(reservation.end_date) <= filterEndDate
-              )
-            );
-          } else {
-            setFilteredReservations(reservations);
-          }
-        }}
-      />
+    <h2 className="text-2xl font-bold mb-4">Reservation List</h2>
+    <ReservationFilter
+      searchQuery={searchQuery}
+      filterStartDate={filterStartDate}
+      filterEndDate={filterEndDate}
+      onSearchChange={(query) => {
+        setSearchQuery(query);
+        if (query) {
+          const lowerQuery = query.toLowerCase();
+          setFilteredReservations(
+            reservations.filter((reservation) =>
+              reservation.customer_name.toLowerCase().includes(lowerQuery)
+            )
+          );
+        } else {
+          setFilteredReservations(reservations);
+        }
+      }}
+      onDateFilter={handleDateFilter}
+      setFilterStartDate={setFilterStartDate}
+      setFilterEndDate={setFilterEndDate}
+    />
+
       <ReservationTable
         reservations={filteredReservations}
         onConfirm={confirmReservation}

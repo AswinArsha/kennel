@@ -6,6 +6,7 @@ const ReservationTable = ({ reservations, onConfirm, onEdit, onCheckout, onCance
       <thead>
         <tr>
           <th className="p-3 font-bold uppercase bg-gray-200 text-gray-600 border">Customer Name</th>
+          <th className="p-3 font-bold uppercase bg-gray-200 text-gray-600 border">Reservation Date</th>
           <th className="p-3 font-bold uppercase bg-gray-200 text-gray-600 border">Kennel Numbers</th>
           <th className="p-3 font-bold uppercase bg-gray-200 text-gray-600 border">Start Date</th>
           <th className="p-3 font-bold uppercase bg-gray-200 text-gray-600 border">End Date</th>
@@ -17,6 +18,7 @@ const ReservationTable = ({ reservations, onConfirm, onEdit, onCheckout, onCance
         {reservations.map((reservation) => (
           <tr key={reservation.id} className="bg-white hover:bg-gray-100">
             <td className="p-3 text-gray-800 border">{reservation.customer_name}</td>
+            <td className="p-3 text-gray-800 border">{new Date(reservation.created_at).toDateString()}</td>
             <td className="p-3 text-gray-800 border">{reservation.kennel_numbers}</td>
             <td className="p-3 text-gray-800 border">{new Date(reservation.start_date).toDateString()}</td>
             <td className="p-3 text-gray-800 border">{new Date(reservation.end_date).toDateString()}</td>
