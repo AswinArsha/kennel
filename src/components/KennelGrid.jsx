@@ -1,41 +1,59 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../supabase";
-import AddSetsModal from "./AddSetsModal";
+import AddKennelsModal from "./AddKennelsModal";
 import EditSetsModal from "./EditSetsModal";
+import ManageKennelsModal from "./ManageKennelsModal";
 import { MdEdit } from "react-icons/md";
 
 const KennelGrid = () => {
   const [kennels, setKennels] = useState([]);
-  const [isAddSetsModalOpen, setIsAddSetsModalOpen] = useState(false);
+  const [isAddKennelsModalOpen, setIsAddKennelsModalOpen] = useState(false);
+  const [isManageKennelsModalOpen, setIsManageKennelsModalOpen] = useState(false);
   const [isEditSetsModalOpen, setIsEditSetsModalOpen] = useState(false);
   const [selectedSet, setSelectedSet] = useState(null);
 
   // Fetch kennels data
-  useEffect(() => {
-    const fetchKennels = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("kennels")
-          .select("*")
-          .order("set_name", { ascending: true })
-          .order("kennel_number", { ascending: true });
+  const fetchKennels = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("kennels")
+        .select("*")
+        .order("set_name", { ascending: true })
+        .order("kennel_number", { ascending: true });
 
-        if (error) {
-          throw error;
-        } else {
-          setKennels(data);
-        }
-      } catch (error) {
-        console.error("Error fetching kennels:", error.message);
+      if (error) {
+        throw error;
+      } else {
+        setKennels(data);
       }
-    };
+    } catch (error) {
+      console.error("Error fetching kennels:", error.message);
+    }
+  };
 
+  useEffect(() => {
     fetchKennels();
+
+    const subscription = supabase
+      .channel('public:kennels')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'kennels' }, () => {
+        fetchKennels();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
   }, []);
 
-  // Open the add sets modal
-  const openAddSetsModal = () => {
-    setIsAddSetsModalOpen(true);
+  // Open the add kennels modal
+  const openAddKennelsModal = () => {
+    setIsAddKennelsModalOpen(true);
+  };
+
+  // Open the manage kennels modal
+  const openManageKennelsModal = () => {
+    setIsManageKennelsModalOpen(true);
   };
 
   // Open the edit sets modal
@@ -58,13 +76,21 @@ const KennelGrid = () => {
     <div className="p-4">
       <h2 className="text-2xl font-semibold mb-4">Kennel Status Overview</h2>
 
-      {/* Add Sets Button */}
-      <button
-        className="bg-blue-500 text-white px-4 py-2 rounded-md mb-4"
-        onClick={openAddSetsModal}
-      >
-        Add Sets
-      </button>
+      {/* Add Kennels and Manage Kennels Buttons */}
+      <div className="flex gap-4 mb-4">
+        <button
+          className="bg-blue-500 text-white px-4 py-2 rounded-md"
+          onClick={openAddKennelsModal}
+        >
+          Add Kennels
+        </button>
+        <button
+          className="bg-blue-500 text-white px-4 py-2 rounded-md"
+          onClick={openManageKennelsModal}
+        >
+          Manage Kennels
+        </button>
+      </div>
 
       {/* Display Kennels */}
       {Object.entries(groupedKennels).map(
@@ -108,11 +134,19 @@ const KennelGrid = () => {
         )
       )}
 
-      {/* Add Sets Modal */}
-      {isAddSetsModalOpen && (
-        <AddSetsModal
-          isOpen={isAddSetsModalOpen}
-          onClose={() => setIsAddSetsModalOpen(false)}
+      {/* Add Kennels Modal */}
+      {isAddKennelsModalOpen && (
+        <AddKennelsModal
+          isOpen={isAddKennelsModalOpen}
+          onClose={() => setIsAddKennelsModalOpen(false)}
+        />
+      )}
+
+      {/* Manage Kennels Modal */}
+      {isManageKennelsModalOpen && (
+        <ManageKennelsModal
+          isOpen={isManageKennelsModalOpen}
+          onClose={() => setIsManageKennelsModalOpen(false)}
         />
       )}
 
@@ -123,7 +157,6 @@ const KennelGrid = () => {
           onClose={() => setIsEditSetsModalOpen(false)}
           setToEdit={selectedSet}
         />
-        
       )}
     </div>
   );

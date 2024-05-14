@@ -1,45 +1,90 @@
-import { useState } from "react";
-import { supabase } from "../supabase"; // Import the Supabase client
+import { useState, useEffect } from "react";
+import { supabase } from "../supabase";
+import AddKennelsToSetModal from "./AddKennelsToSetModal";
 
 const EditSetsModal = ({ isOpen, onClose, setToEdit }) => {
-  const [editedSetName, setEditedSetName] = useState(setToEdit?.name || "");
-  const [editedNumKennels, setEditedNumKennels] = useState(
-    setToEdit?.number_of_kennels || 1
-  );
+  const [editedSetName, setEditedSetName] = useState("");
+  const [kennels, setKennels] = useState([]);
   const [error, setError] = useState("");
+  const [isAddKennelsModalOpen, setIsAddKennelsModalOpen] = useState(false);
 
-  // Function to handle form submission
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  useEffect(() => {
+    if (setToEdit) {
+      setEditedSetName(setToEdit.name);
+      // Fetch the kennels for the set
+      const fetchKennels = async () => {
+        const { data, error } = await supabase
+          .from("kennels")
+          .select("*")
+          .eq("set_name", setToEdit.name);
 
-    // Validation: Check if set name is not empty and number of kennels is greater than 0
-    if (!editedSetName.trim()) {
-      setError("Set name is required.");
-      return;
+        if (error) {
+          console.error("Error fetching kennels:", error);
+        } else {
+          setKennels(data);
+        }
+      };
+
+      fetchKennels();
     }
+  }, [setToEdit]);
 
-    if (editedNumKennels <= 0) {
-      setError("Number of kennels must be greater than 0.");
-      return;
-    }
+  const handleAddKennel = () => {
+    setIsAddKennelsModalOpen(true);
+  };
 
+  const handleRemoveKennel = async (kennel_id) => {
     try {
-      // Update the set in the Supabase database
-      const { data, error } = await supabase
-        .from("sets")
-        .update({ name: editedSetName, number_of_kennels: editedNumKennels })
-        .eq("id", setToEdit.id);
+      const { error } = await supabase
+        .from("kennels")
+        .update({ set_name: null })
+        .eq("id", kennel_id);
 
       if (error) {
         throw error;
       }
 
-      // Clear input fields and error message
-      setEditedSetName("");
-      setEditedNumKennels(1);
-      setError("");
+      setKennels(kennels.filter((kennel) => kennel.id !== kennel_id));
+    } catch (error) {
+      console.error("Error removing kennel:", error.message);
+      setError("An error occurred while removing the kennel. Please try again.");
+    }
+  };
 
-      // Close the modal
+  const handleAddKennelsToSet = (addedKennels) => {
+    setKennels((prevKennels) => [...prevKennels, ...addedKennels]);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!editedSetName.trim()) {
+      setError("Set name is required.");
+      return;
+    }
+
+    if (kennels.length === 0) {
+      setError("At least one kennel is required.");
+      return;
+    }
+
+    try {
+      const updates = kennels.map((kennel) => ({
+        ...kennel,
+        set_name: editedSetName,
+      }));
+
+      const { error: updateError } = await supabase
+        .from("kennels")
+        .upsert(updates, { onConflict: "id" });
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      setEditedSetName("");
+      setKennels([]);
+      setError("");
       onClose();
     } catch (error) {
       console.error("Error updating set:", error.message);
@@ -60,14 +105,10 @@ const EditSetsModal = ({ isOpen, onClose, setToEdit }) => {
             onClick={onClose}
           ></div>
         </div>
-        <span className="hidden sm:inline-block sm:align-middle sm:h-screen"></span>
-        &#8203;
-        <div
-          className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="modal-headline"
-        >
+        <span className="hidden sm:inline-block sm:align-middle sm:h-screen">
+          &#8203;
+        </span>
+        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
           <form onSubmit={handleSubmit}>
             <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
               <div className="sm:flex sm:items-start">
@@ -78,7 +119,6 @@ const EditSetsModal = ({ isOpen, onClose, setToEdit }) => {
                   >
                     Edit Set
                   </h3>
-                  {/* Set Name */}
                   <div className="mb-4">
                     <label
                       htmlFor="set-name"
@@ -94,28 +134,32 @@ const EditSetsModal = ({ isOpen, onClose, setToEdit }) => {
                       onChange={(e) => setEditedSetName(e.target.value)}
                     />
                   </div>
-                  {/* Number of Kennels */}
-                  <div className="mb-4">
-                    <label
-                      htmlFor="num-kennels"
-                      className="block text-sm font-medium text-gray-700"
+                  {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+                  <div className="grid grid-cols-3 gap-4">
+                    {kennels.map((kennel) => (
+                      <div
+                        key={kennel.id}
+                        className="relative border p-4 rounded-md"
+                      >
+                        <span
+                          className="absolute top-0 right-0 p-1 text-red-600 cursor-pointer"
+                          onClick={() => handleRemoveKennel(kennel.id)}
+                        >
+                          &times;
+                        </span>
+                        <p className="text-center">
+                          Kennel {kennel.kennel_number}
+                        </p>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      className="border-dashed border-2 border-gray-300 text-gray-400 flex items-center justify-center p-4 rounded-md"
+                      onClick={handleAddKennel}
                     >
-                      Number of Kennels
-                    </label>
-                    <input
-                      type="number"
-                      id="num-kennels"
-                      className="mt-1 p-2 border rounded-md w-full"
-                      value={editedNumKennels}
-                      onChange={(e) =>
-                        setEditedNumKennels(parseInt(e.target.value))
-                      }
-                    />
+                      <span className="text-2xl">+</span>
+                    </button>
                   </div>
-                  {/* Error Message */}
-                  {error && (
-                    <p className="text-red-500 text-sm mb-4">{error}</p>
-                  )}
                 </div>
               </div>
             </div>
@@ -137,6 +181,14 @@ const EditSetsModal = ({ isOpen, onClose, setToEdit }) => {
           </form>
         </div>
       </div>
+      {isAddKennelsModalOpen && (
+        <AddKennelsToSetModal
+          isOpen={isAddKennelsModalOpen}
+          onClose={() => setIsAddKennelsModalOpen(false)}
+          setName={editedSetName}
+          onKennelsAdded={handleAddKennelsToSet}
+        />
+      )}
     </div>
   );
 };

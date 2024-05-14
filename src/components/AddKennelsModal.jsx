@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { supabase } from "../supabase";
 
-const AddSetsModal = ({ isOpen, onClose }) => {
-  const [setName, setSetName] = useState("");
+const AddKennelsModal = ({ isOpen, onClose }) => {
   const [numKennels, setNumKennels] = useState(1);
   const [error, setError] = useState("");
 
@@ -10,58 +9,34 @@ const AddSetsModal = ({ isOpen, onClose }) => {
     e.preventDefault();
 
     // Validation checks...
-    if (!setName.trim()) {
-      setError("Set name is required.");
-      return;
-    }
-
     if (numKennels <= 0) {
       setError("Number of kennels must be greater than 0.");
       return;
     }
 
     try {
-      // Check if the set name already exists
-      const { data: existingSets, error: fetchError } = await supabase
-        .from("kennels")
-        .select("set_name")
-        .eq("set_name", setName);
-
-      if (fetchError) {
-        console.error("Error checking existing sets:", fetchError);
-        throw fetchError;
-      }
-
-      if (existingSets.length > 0) {
-        setError(
-          "The set name already exists. Please choose a different name."
-        );
-        return;
-      }
-
-      // Determine the starting kennel number for the set
-      let startingKennelNumber = 1;
-      const { data: latestKennelInSet, error: latestError } = await supabase
+      // Determine the highest kennel number across all sets
+      const { data: allKennels, error: allKennelsError } = await supabase
         .from("kennels")
         .select("kennel_number")
-        .eq("set_name", setName)
         .order("kennel_number", { ascending: false })
         .limit(1);
 
-      if (latestError) {
-        console.error("Error fetching latest kennel number:", latestError);
-        throw latestError;
+      if (allKennelsError) {
+        console.error("Error fetching kennels:", allKennelsError);
+        throw allKennelsError;
       }
 
-      if (latestKennelInSet.length > 0) {
-        startingKennelNumber = latestKennelInSet[0].kennel_number + 1;
+      let startingKennelNumber = 1;
+      if (allKennels.length > 0) {
+        startingKennelNumber = allKennels[0].kennel_number + 1;
       }
 
       // Insert new kennels into the "kennels" table
       const newKennels = Array.from({ length: numKennels }, (_, index) => ({
         kennel_number: startingKennelNumber + index,
         status: "available",
-        set_name: setName,
+        set_name: null,
       }));
 
       const { error: insertKennelsError } = await supabase
@@ -74,7 +49,6 @@ const AddSetsModal = ({ isOpen, onClose }) => {
       }
 
       // Clear input fields and error message
-      setSetName("");
       setNumKennels(1);
       setError("");
 
@@ -101,12 +75,7 @@ const AddSetsModal = ({ isOpen, onClose }) => {
         </div>
         <span className="hidden sm:inline-block sm:align-middle sm:h-screen"></span>
         &#8203;
-        <div
-          className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="modal-headline"
-        >
+        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
           <form onSubmit={handleSubmit}>
             <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
               <div className="sm:flex sm:items-start">
@@ -115,24 +84,8 @@ const AddSetsModal = ({ isOpen, onClose }) => {
                     className="text-lg leading-6 font-medium text-gray-900 mb-4"
                     id="modal-headline"
                   >
-                    Add New Set
+                    Add New Kennels
                   </h3>
-                  {/* Set Name */}
-                  <div className="mb-4">
-                    <label
-                      htmlFor="set-name"
-                      className="block text-sm font-medium text-gray-700"
-                    >
-                      Set Name
-                    </label>
-                    <input
-                      type="text"
-                      id="set-name"
-                      className="mt-1 p-2 border rounded-md w-full"
-                      value={setName}
-                      onChange={(e) => setSetName(e.target.value)}
-                    />
-                  </div>
                   {/* Number of Kennels */}
                   <div className="mb-4">
                     <label
@@ -161,7 +114,7 @@ const AddSetsModal = ({ isOpen, onClose }) => {
                 type="submit"
                 className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-500 text-base font-medium text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
               >
-                Add Set
+                Add Kennels
               </button>
               <button
                 type="button"
@@ -178,4 +131,4 @@ const AddSetsModal = ({ isOpen, onClose }) => {
   );
 };
 
-export default AddSetsModal;
+export default AddKennelsModal;

@@ -163,7 +163,7 @@ const FeedingLogHistory = () => {
             <input
               type="text"
               className="w-full p-2 border rounded-md"
-              placeholder="Filter "
+              placeholder="Kennel Number"
               value={filterKennelNumber}
               onChange={(e) => setFilterKennelNumber(e.target.value)}
             />
