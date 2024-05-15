@@ -1,4 +1,5 @@
-import PropTypes from "prop-types"; // Import PropTypes for prop validation
+import React from "react";
+import PropTypes from "prop-types";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -37,15 +38,16 @@ const ReservationFilter = ({
           onChange={handleStartDateChange}
           className="p-2 border rounded-md"
           dateFormat="yyyy/MM/dd"
-          placeholderText="Start date"
+          placeholderText="Check In"
         />
         <DatePicker
           selected={filterEndDate}
           onChange={handleEndDateChange}
           className="p-2 border rounded-md"
           dateFormat="yyyy/MM/dd"
-          placeholderText="End date"
+          placeholderText="Check Out"
         />
+      
       </div>
     </div>
   );

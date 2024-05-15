@@ -3,14 +3,19 @@ import { supabase } from "../supabase";
 import AddKennelsModal from "./AddKennelsModal";
 import EditSetsModal from "./EditSetsModal";
 import ManageKennelsModal from "./ManageKennelsModal";
+import CustomerDetailDialog from "./CustomerDetailDialog";
 import { MdEdit } from "react-icons/md";
 
 const KennelGrid = () => {
   const [kennels, setKennels] = useState([]);
   const [isAddKennelsModalOpen, setIsAddKennelsModalOpen] = useState(false);
-  const [isManageKennelsModalOpen, setIsManageKennelsModalOpen] = useState(false);
+  const [isManageKennelsModalOpen, setIsManageKennelsModalOpen] =
+    useState(false);
   const [isEditSetsModalOpen, setIsEditSetsModalOpen] = useState(false);
   const [selectedSet, setSelectedSet] = useState(null);
+  const [selectedKennel, setSelectedKennel] = useState(null); // State for selected kennel
+  const [isCustomerDetailDialogOpen, setIsCustomerDetailDialogOpen] =
+    useState(false);
 
   // Fetch kennels data
   const fetchKennels = async () => {
@@ -35,10 +40,14 @@ const KennelGrid = () => {
     fetchKennels();
 
     const subscription = supabase
-      .channel('public:kennels')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'kennels' }, () => {
-        fetchKennels();
-      })
+      .channel("public:kennels")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "kennels" },
+        () => {
+          fetchKennels();
+        }
+      )
       .subscribe();
 
     return () => {
@@ -60,6 +69,12 @@ const KennelGrid = () => {
   const openEditSetsModal = (set) => {
     setSelectedSet(set);
     setIsEditSetsModalOpen(true);
+  };
+
+  // Handle kennel click
+  const handleKennelClick = (kennel) => {
+    setSelectedKennel(kennel);
+    setIsCustomerDetailDialogOpen(true);
   };
 
   // Group kennels by set names
@@ -122,6 +137,7 @@ const KennelGrid = () => {
                   style={{
                     transition: "background-color 0.3s ease",
                   }}
+                  onClick={() => handleKennelClick(kennel)}
                 >
                   Kennel {kennel.kennel_number}
                 </div>
@@ -156,6 +172,15 @@ const KennelGrid = () => {
           isOpen={isEditSetsModalOpen}
           onClose={() => setIsEditSetsModalOpen(false)}
           setToEdit={selectedSet}
+        />
+      )}
+
+      {/* Customer Detail Dialog */}
+      {isCustomerDetailDialogOpen && (
+        <CustomerDetailDialog
+          isOpen={isCustomerDetailDialogOpen}
+          onClose={() => setIsCustomerDetailDialogOpen(false)}
+          customer={selectedKennel}
         />
       )}
     </div>

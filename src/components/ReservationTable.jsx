@@ -1,80 +1,95 @@
+import React from 'react';
+import { FaCheck, FaTimes } from 'react-icons/fa';
 
-
-const ReservationTable = ({ reservations, onConfirm, onEdit, onCheckout, onCancel }) => { // Ensure onCancel is included in props
+const ReservationTable = ({ reservations, onConfirm, onEdit, onCheckout, onCancel }) => {
   return (
-    <table className="border-collapse w-full text-center">
-      <thead>
-        <tr>
-          <th className="p-3 font-bold uppercase bg-gray-200 text-gray-600 border">Customer Name</th>
-          <th className="p-3 font-bold uppercase bg-gray-200 text-gray-600 border">Reservation Date</th>
-          <th className="p-3 font-bold uppercase bg-gray-200 text-gray-600 border">Kennel Numbers</th>
-          <th className="p-3 font-bold uppercase bg-gray-200 text-gray-600 border">Start Date</th>
-          <th className="p-3 font-bold uppercase bg-gray-200 text-gray-600 border">End Date</th>
-          <th className="p-3 font-bold uppercase bg-gray-200 text-gray-600 border">Status</th>
-          <th className="p-3 font-bold uppercase bg-gray-200 text-gray-600 border">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {reservations.map((reservation) => (
-          <tr key={reservation.id} className="bg-white hover:bg-gray-100">
-            <td className="p-3 text-gray-800 border">{reservation.customer_name}</td>
-            <td className="p-3 text-gray-800 border">{new Date(reservation.created_at).toDateString()}</td>
-            <td className="p-3 text-gray-800 border">{reservation.kennel_numbers}</td>
-            <td className="p-3 text-gray-800 border">{new Date(reservation.start_date).toDateString()}</td>
-            <td className="p-3 text-gray-800 border">{new Date(reservation.end_date).toDateString()}</td>
-            <td className="p-3 text-gray-800 border">
-              <span
-                className={`rounded py-1 px-3 text-xs font-bold ${
-                  reservation.status === "confirmed"
-                    ? "bg-green-400"
-                    : reservation.status === "canceled"
-                    ? "bg-red-400"
-                    : reservation.status === "checkout"
-                    ? "bg-blue-400"
-                    : "bg-yellow-400"
-                }`}
-              >
-                {reservation.status}
-              </span>
-            </td>
-            <td className="p-3 text-gray-800 border">
-              {reservation.status === "pending" && (
-                <button
-                  className="bg-green-500 text-white py-1 px-2 rounded-md hover:bg-green-600"
-                  onClick={() => onConfirm(reservation)}
-                >
-                  Confirm
-                </button>
-              )}
-              {reservation.status === "pending" && onCancel && ( // Check if onCancel is defined
-                <button
-                  className="bg-red-500 text-white py-1 px-2 rounded-md hover:bg-red-600 ml-2"
-                  onClick={() => onCancel(reservation)}
-                >
-                  Cancel
-                </button>
-              )}
-              {reservation.status === "confirmed" && (
-                <>
-                  <button
-                    className="bg-blue-500 text-white py-1 px-2 rounded-md hover:bg-blue-600 ml-2"
-                    onClick={() => onEdit(reservation)}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    className="bg-indigo-500 text-white py-1 px-2 rounded-md hover:bg-indigo-600 ml-2"
-                    onClick={() => onCheckout(reservation)}
-                  >
-                    Checkout
-                  </button>
-                </>
-              )}
-            </td>
+    <div className="overflow-x-auto rounded-lg border border-gray-200">
+      <table className="min-w-full divide-y-2 divide-gray-200 bg-white text-sm">
+        <thead className="bg-gray-50">
+          <tr>
+            <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">Customer Name</th>
+            <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">Reservation Date</th>
+            <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">Kennel Numbers</th>
+            <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">Check In</th>
+            <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">Check Out</th>
+            <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">Pickup</th>
+            <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">Drop</th>
+            <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">Groom</th>
+            <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">Status</th>
+            <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">Actions</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody className="divide-y divide-gray-200">
+          {reservations.map((reservation) => (
+            <tr key={reservation.id} className="bg-white hover:bg-gray-100">
+              <td className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">{reservation.customer_name}</td>
+              <td className="whitespace-nowrap px-4 py-2 text-gray-700">{new Date(reservation.created_at).toDateString()}</td>
+              <td className="whitespace-nowrap px-4 py-2 text-gray-700">{reservation.kennel_numbers}</td>
+              <td className="whitespace-nowrap px-4 py-2 text-gray-700">{new Date(reservation.start_date).toDateString()}</td>
+              <td className="whitespace-nowrap px-4 py-2 text-gray-700">{new Date(reservation.end_date).toDateString()}</td>
+              <td className="whitespace-nowrap px-4 py-2 text-center">
+                {reservation.pickup ? <FaCheck className="text-green-500" /> : <FaTimes className="text-red-500" />}
+              </td>
+              <td className="whitespace-nowrap px-4 py-2 text-center">
+                {reservation.drop ? <FaCheck className="text-green-500" /> : <FaTimes className="text-red-500" />}
+              </td>
+              <td className="whitespace-nowrap px-4 py-2 text-center">
+                {reservation.groom ? <FaCheck className="text-green-500" /> : <FaTimes className="text-red-500" />}
+              </td>
+              <td className="whitespace-nowrap px-4 py-2 text-gray-800">
+                <span
+                  className={`rounded py-1 px-3 text-xs font-bold ${
+                    reservation.status === "confirmed"
+                      ? "bg-green-400"
+                      : reservation.status === "canceled"
+                      ? "bg-red-400"
+                      : reservation.status === "checkout"
+                      ? "bg-blue-400"
+                      : "bg-yellow-400"
+                  }`}
+                >
+                  {reservation.status}
+                </span>
+              </td>
+              <td className="whitespace-nowrap px-4 py-2 text-gray-800">
+                {reservation.status === "pending" && (
+                  <button
+                    className="bg-green-500 text-white py-1 px-2 rounded-md hover:bg-green-600"
+                    onClick={() => onConfirm(reservation)}
+                  >
+                    Confirm
+                  </button>
+                )}
+                {reservation.status === "pending" && onCancel && (
+                  <button
+                    className="bg-red-500 text-white py-1 px-2 rounded-md hover:bg-red-600 ml-2"
+                    onClick={() => onCancel(reservation)}
+                  >
+                    Cancel
+                  </button>
+                )}
+                {reservation.status === "confirmed" && (
+                  <>
+                    <button
+                      className="bg-blue-500 text-white py-1 px-2 rounded-md hover:bg-blue-600 ml-2"
+                      onClick={() => onEdit(reservation)}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className="bg-indigo-500 text-white py-1 px-2 rounded-md hover:bg-indigo-600 ml-2"
+                      onClick={() => onCheckout(reservation)}
+                    >
+                      Checkout
+                    </button>
+                  </>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 };
 

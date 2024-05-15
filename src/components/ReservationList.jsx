@@ -16,18 +16,16 @@ const ReservationList = () => {
   const fetchReservations = async () => {
     const { data, error } = await supabase
       .from("reservations")
-      .select("*, kennel_ids") // Fetching kennel IDs
-      .order("created_at", { ascending: false }); // Optional ordering
+      .select("*, kennel_ids")
+      .order("created_at", { ascending: false });
 
     if (error) {
       console.error("Error fetching reservations:", error.message);
     } else {
-      // Fetch kennel numbers for each reservation's kennel_ids
       for (const reservation of data) {
         const kennelNumbers = await fetchKennelNumbers(reservation.kennel_ids);
-        reservation.kennel_numbers = kennelNumbers.join(", "); // Adding a new field with joined kennel numbers
+        reservation.kennel_numbers = kennelNumbers.join(", ");
       }
-
       setReservations(data);
       setFilteredReservations(data);
     }
@@ -45,7 +43,7 @@ const ReservationList = () => {
       return [];
     }
 
-    return data.map((k) => k.kennel_number); // Return the kennel numbers
+    return data.map((k) => k.kennel_number);
   };
 
   const confirmReservation = async (reservation) => {
@@ -63,8 +61,7 @@ const ReservationList = () => {
             .eq("id", kennelId)
         )
       );
-
-      fetchReservations(); // Refresh the list after update
+      fetchReservations();
     }
   };
 
@@ -83,8 +80,7 @@ const ReservationList = () => {
             .eq("id", kennelId)
         )
       );
-
-      fetchReservations(); // Refresh the list after update
+      fetchReservations();
     }
   };
 
@@ -95,7 +91,7 @@ const ReservationList = () => {
       .eq("id", reservation.id);
 
     if (!error) {
-      fetchReservations(); // Refresh the list after update
+      fetchReservations();
     }
   };
 
@@ -110,44 +106,46 @@ const ReservationList = () => {
   const handleFilterEndDateChange = (date) => {
     setFilterEndDate(date);
   };
+
   const handleDateFilter = (startDate, endDate) => {
     if (startDate && endDate) {
       setFilteredReservations(
         reservations.filter(
           (reservation) =>
             new Date(reservation.start_date) >= startDate &&
-            new Date(reservation.end_date) <= endDate.setHours(23, 59, 59, 999) // Include reservations with end date equal to the selected end date
+            new Date(reservation.end_date) <= endDate.setHours(23, 59, 59, 999)
         )
       );
     } else {
       setFilteredReservations(reservations);
     }
   };
+
+
   return (
     <div>
-    <h2 className="text-2xl font-bold mb-4">Reservation List</h2>
-    <ReservationFilter
-      searchQuery={searchQuery}
-      filterStartDate={filterStartDate}
-      filterEndDate={filterEndDate}
-      onSearchChange={(query) => {
-        setSearchQuery(query);
-        if (query) {
-          const lowerQuery = query.toLowerCase();
-          setFilteredReservations(
-            reservations.filter((reservation) =>
-              reservation.customer_name.toLowerCase().includes(lowerQuery)
-            )
-          );
-        } else {
-          setFilteredReservations(reservations);
-        }
-      }}
-      onDateFilter={handleDateFilter}
-      setFilterStartDate={setFilterStartDate}
-      setFilterEndDate={setFilterEndDate}
-    />
-
+      <h2 className="text-2xl font-bold mb-4">Reservation List</h2>
+      <ReservationFilter
+        searchQuery={searchQuery}
+        filterStartDate={filterStartDate}
+        filterEndDate={filterEndDate}
+        onSearchChange={(query) => {
+          setSearchQuery(query);
+          if (query) {
+            const lowerQuery = query.toLowerCase();
+            setFilteredReservations(
+              reservations.filter((reservation) =>
+                reservation.customer_name.toLowerCase().includes(lowerQuery)
+              )
+            );
+          } else {
+            setFilteredReservations(reservations);
+          }
+        }}
+        onDateFilter={handleDateFilter}
+        setFilterStartDate={setFilterStartDate}
+        setFilterEndDate={setFilterEndDate}
+      />
       <ReservationTable
         reservations={filteredReservations}
         onConfirm={confirmReservation}
@@ -163,7 +161,7 @@ const ReservationList = () => {
           selectedReservation={selectedReservation}
           isOpen={isEditModalOpen}
           onClose={() => setIsEditModalOpen(false)}
-          onSave={fetchReservations} // Refresh on save
+          onSave={fetchReservations}
         />
       )}
     </div>
