@@ -72,10 +72,13 @@ const KennelGrid = () => {
   };
 
   // Handle kennel click
-  const handleKennelClick = (kennel) => {
+// Handle kennel click
+const handleKennelClick = (kennel) => {
+  if (kennel.status === "occupied") {
     setSelectedKennel(kennel);
     setIsCustomerDetailDialogOpen(true);
-  };
+  }
+};
 
   // Group kennels by set names
   const groupedKennels = kennels.reduce((acc, kennel) => {
@@ -125,22 +128,24 @@ const KennelGrid = () => {
             {/* Kennels in the Set */}
             <div className="grid grid-cols-5 md:grid-cols-10 gap-4 mb-4">
               {kennelsForSet.map((kennel) => (
-                <div
-                  key={kennel.id}
-                  className={`p-4 text-center rounded-md transition-colors cursor-pointer ${
-                    kennel.status === "available"
-                      ? "bg-green-500 text-white"
-                      : kennel.status === "reserved"
-                      ? "bg-yellow-500 text-white"
-                      : "bg-red-500 text-white"
-                  }`}
-                  style={{
-                    transition: "background-color 0.3s ease",
-                  }}
-                  onClick={() => handleKennelClick(kennel)}
-                >
-                  Kennel {kennel.kennel_number}
-                </div>
+             <div
+             key={kennel.id}
+             className={`p-4 text-center rounded-md transition-colors cursor-pointer ${
+               kennel.status === "available"
+                 ? "bg-green-500 text-white"
+                 : kennel.status === "reserved"
+                 ? "bg-yellow-500 text-white"
+                 : kennel.status === "occupied"
+                 ? "bg-red-500 text-white"
+                 : "bg-gray-400 text-white"
+             }`}
+             style={{
+               transition: "background-color 0.3s ease",
+             }}
+             onClick={() => handleKennelClick(kennel)}
+           >
+             Kennel {kennel.kennel_number}
+           </div>
               ))}
             </div>
 

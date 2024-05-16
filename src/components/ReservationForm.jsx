@@ -22,8 +22,9 @@ const ReservationForm = () => {
     const { data, error } = await supabase
       .from("kennels")
       .select("*")
-      .eq("status", "available");
-
+      .eq("status", "available")
+      .not("set_name", "is", null); // Add this line to exclude kennels with NULL set_name
+  
     if (error) {
       console.error("Error fetching kennels:", error.message);
     } else {
