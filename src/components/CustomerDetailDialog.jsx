@@ -92,7 +92,7 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
           .from("feeding_schedule")
           .select("*")
           .eq("kennel_id", customer.id);
-  
+
         if (error) {
           console.error("Error fetching feeding schedule:", error.message);
         } else {
@@ -113,12 +113,12 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
             }
             return acc;
           }, {});
-  
+
           setFilteredFeedings(Object.values(groupedData));
         }
       }
     };
-  
+
     fetchFeedingSchedule();
   }, [customer]);
 
@@ -129,18 +129,39 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
       feeding.morning_fed ? "Yes" : "No",
       feeding.noon_fed ? "Yes" : "No",
     ]);
-
-    doc.setFontSize(18);
+  
+    doc.setFontSize(20);
+    doc.setFont("helvetica", "bold");
     doc.text("Feeding Information", 20, 20);
-    doc.setFontSize(14);
-    doc.text(`Kennel ID: ${filteredFeedings[0]?.kennel_id}`, 20, 30);
-
+  
     doc.autoTable({
       startY: 40,
-      head: [["Date", "Morning Fed", "Noon Fed"]],
+      head: [["Date", "Morning", "Noon"]],
       body: tableData,
+      theme: 'striped', // Add striped theme for better readability
+      headStyles: {
+        fillColor: [100, 100, 255], // Set header background color to a subtle blue
+        textColor: [255, 255, 255], // Set header text color to white
+        fontSize: 12, // Set header font size
+        halign: 'center' // Center-align header text
+      },
+      bodyStyles: {
+        fontSize: 10, // Set body font size
+        cellPadding: 4 // Add cell padding for better readability
+      },
+      alternateRowStyles: {
+        fillColor: [240, 240, 255] // Set alternate row background color for better readability
+      },
+      styles: {
+        lineColor: [200, 200, 200], // Set border color
+        lineWidth: 0.1, // Set border width
+        font: 'helvetica', // Set font to helvetica
+        fontStyle: 'normal', // Set font style to normal
+        overflow: 'linebreak', // Enable line breaking for text overflow
+      },
+      margin: { top: 40, right: 20, bottom: 20, left: 20 } // Add margins for better spacing
     });
-
+  
     doc.save("feeding_information.pdf");
   };
 
@@ -165,20 +186,20 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
         <Tabs>
           <TabList className="flex mb-4 border-b border-gray-300">
             <Tab
-              className="px-4 py-2 text-gray-600 hover:text-gray-800  "
-              selectedClassName="text-blue-500 border-b-2 border-blue-500"
+              className="px-4 py-2  text-gray-600 cursor-pointer hover:text-gray-800  "
+              selectedClassName=" text-blue-700  border-b-2 border-blue-500"
             >
               Pet Information
             </Tab>
             <Tab
-              className="px-4 py-2 text-gray-600 hover:text-gray-800 "
-              selectedClassName="text-blue-500 border-b-2 border-blue-500"
+              className="px-4 py-2 text-gray-600 cursor-pointer hover:text-gray-800 "
+              selectedClassName="text-blue-700 border-b-2 border-blue-500"
             >
               Customer Information
             </Tab>
             <Tab
-              className="px-4 py-2 text-gray-600 hover:text-gray-800 "
-              selectedClassName="text-blue-500 border-b-2 border-blue-500"
+              className="px-4 py-2 text-gray-600 cursor-pointer hover:text-gray-800 "
+              selectedClassName="text-blue-700 border-b-2 border-blue-500"
             >
               Feeding Information
             </Tab>
@@ -253,7 +274,7 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
                     </div>
                   </div>
 
-                  <div className="p-4 mt-4 border rounded-md bg-gray-100 text-gray-800 w-72">
+                  <div className="p-4  mt-4 border rounded-md bg-gray-100 text-gray-800 w-8/12">
                     <h3 className="text-lg font-semibold text-gray-700 mb-2">
                       Additional Details
                     </h3>
@@ -280,150 +301,157 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
           </TabPanel>
 
           <TabPanel>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <div className="mb-4">
-                  <label className="block font-semibold text-gray-700">
-                    Name
-                  </label>
-                  <div className="p-2 border rounded-md bg-gray-100 text-gray-800">
-                    {customerDetail.customer_name}
-                  </div>
-                </div>
-                <div className="mb-4">
-                  <label className="block font-semibold text-gray-700">
-                    Phone
-                  </label>
-                  <div className="p-2 border rounded-md bg-gray-100 text-gray-800">
-                    {customerDetail.customer_phone}
-                  </div>
-                </div>
-                <div className="mb-4">
-                  <label className="block font-semibold text-gray-700">
-                    Address
-                  </label>
-                  <div className="p-2 border rounded-md bg-gray-100 text-gray-800">
-                    {customerDetail.customer_address}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </TabPanel>
-
-          <TabPanel>
-  <div className="mt-4">
-    <div className="flex items-center mb-4">
-      <label className="mr-4 font-semibold text-gray-700">
-        Filter by Date:
-      </label>
-      <input
-        type="date"
-        className="border rounded-md p-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        value={filterDate || ""}
-        onChange={(e) => setFilterDate(e.target.value)}
-      />
-      <button
-        className="ml-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-        onClick={downloadPDF}
-      >
-        <FaDownload className="inline-block mr-2" />
-        Download PDF
-      </button>
-    </div>
-    <div className="overflow-x-auto rounded-lg border border-gray-200">
-      <table className="min-w-full divide-y divide-gray-200 bg-white text-sm">
-        <thead className="ltr:text-left rtl:text-right bg-gray-200 text-gray-700">
-          <tr>
-            <th className="whitespace-nowrap px-3 py-2 font-semibold">
-              Feeding Date
-            </th>
-            <th className="whitespace-nowrap px-3 py-2 font-semibold">
-              Fed (Morning)
-            </th>
-            <th className="whitespace-nowrap px-3 py-2 font-semibold">
-              Fed (Noon)
-            </th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-200">
-          {filterDate
-            ? filteredFeedings.filter(
-                (feeding) =>
-                  new Date(feeding.feeding_date).toISOString().slice(0, 10) ===
-                  filterDate
-              ).map((feeding, index) => (
-                <tr
-                  key={index}
-                  className={`${
-                    index % 2 === 0 ? "bg-gray-100" : "bg-white"
-                  } hover:bg-gray-200 transition-colors`}
-                >
-                  <td className="whitespace-nowrap px-3 py-2">
-                    {new Date(feeding.feeding_date).toLocaleDateString()}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2">
-                    {feeding.morning_fed ? (
-                      <span className="bg-green-500 text-white p-1 rounded">
-                        Yes
-                      </span>
-                    ) : (
-                      <span className="bg-red-500 text-white p-1 rounded">
-                        No
-                      </span>
-                    )}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2">
-                    {feeding.noon_fed ? (
-                      <span className="bg-green-500 text-white p-1 rounded">
-                        Yes
-                      </span>
-                    ) : (
-                      <span className="bg-red-500 text-white p-1 rounded">
-                        No
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))
-            : filteredFeedings.map((feeding, index) => (
-                <tr
-                  key={index}
-                  className={`${
-                    index % 2 === 0 ? "bg-gray-100" : "bg-white"
-                  } hover:bg-gray-200 transition-colors`}
-                >
-                  <td className="whitespace-nowrap px-3 py-2">
-                    {new Date(feeding.feeding_date).toLocaleDateString()}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2">
-                    {feeding.morning_fed ? (
-                      <span className="bg-green-500 text-white p-1 rounded">
-                        Yes
-                      </span>
-                    ) : (
-                      <span className="bg-red-500 text-white p-1 rounded">
-                        No
-                      </span>
-                    )}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2">
-                    {feeding.noon_fed ? (
-                      <span className="bg-green-500 text-white p-1 rounded">
-                        Yes
-                      </span>
-                    ) : (
-                      <span className="bg-red-500 text-white p-1 rounded">
-                        No
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-        </tbody>
-      </table>
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <div>
+      <div className="mb-6">
+        <label className="block text-lg font-semibold text-gray-800 mb-2">
+          Name
+        </label>
+        <div className="p-3 rounded-lg bg-gray-100  text-gray-700">
+          {customerDetail.customer_name}
+        </div>
+      </div>
+      <div className="mb-6">
+        <label className="block text-lg font-semibold text-gray-800 mb-2">
+          Phone
+        </label>
+        <div className="p-3 rounded-lg bg-gray-100  text-gray-700">
+          {customerDetail.customer_phone}
+        </div>
+      </div>
+      <div className="mb-6">
+        <label className="block text-lg font-semibold text-gray-800 mb-2">
+          Address
+        </label>
+        <div className="p-3 rounded-lg bg-gray-100  text-gray-700">
+          {customerDetail.customer_address}
+        </div>
+      </div>
     </div>
   </div>
 </TabPanel>
+
+          <TabPanel>
+            <div className="mt-4">
+              <div className="flex items-center mb-4">
+                <label className="mr-4 font-semibold text-gray-700">
+                  Filter by Date:
+                </label>
+                <input
+                  type="date"
+                  className="border rounded-md p-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  value={filterDate || ""}
+                  onChange={(e) => setFilterDate(e.target.value)}
+                />
+                <button
+                  className="ml-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                  onClick={downloadPDF}
+                >
+                  <FaDownload className="inline-block mr-2" />
+                  Download PDF
+                </button>
+              </div>
+              <div className="overflow-x-auto rounded-lg border border-gray-200">
+                <table className="min-w-full divide-y divide-gray-200 bg-white text-sm">
+                  <thead className="ltr:text-left rtl:text-right bg-gray-200 text-gray-700">
+                    <tr>
+                      <th className="whitespace-nowrap px-3 py-2 font-semibold">
+                        Feeding Date
+                      </th>
+                      <th className="whitespace-nowrap px-3 py-2 font-semibold">
+                        Fed (Morning)
+                      </th>
+                      <th className="whitespace-nowrap px-3 py-2 font-semibold">
+                        Fed (Noon)
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {filterDate
+                      ? filteredFeedings
+                          .filter(
+                            (feeding) =>
+                              new Date(feeding.feeding_date)
+                                .toISOString()
+                                .slice(0, 10) === filterDate
+                          )
+                          .map((feeding, index) => (
+                            <tr
+                              key={index}
+                              className={`${
+                                index % 2 === 0 ? "bg-gray-100" : "bg-white"
+                              } hover:bg-gray-200 transition-colors`}
+                            >
+                              <td className="whitespace-nowrap px-3 py-2">
+                                {new Date(
+                                  feeding.feeding_date
+                                ).toLocaleDateString()}
+                              </td>
+                              <td className="whitespace-nowrap px-3 py-2">
+                                {feeding.morning_fed ? (
+                                  <span className="bg-green-500 text-white p-1 rounded">
+                                    Yes
+                                  </span>
+                                ) : (
+                                  <span className="bg-red-500 text-white p-1 rounded">
+                                    No
+                                  </span>
+                                )}
+                              </td>
+                              <td className="whitespace-nowrap px-3 py-2">
+                                {feeding.noon_fed ? (
+                                  <span className="bg-green-500 text-white p-1 rounded">
+                                    Yes
+                                  </span>
+                                ) : (
+                                  <span className="bg-red-500 text-white p-1 rounded">
+                                    No
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          ))
+                      : filteredFeedings.map((feeding, index) => (
+                          <tr
+                            key={index}
+                            className={`${
+                              index % 2 === 0 ? "bg-gray-100" : "bg-white"
+                            } hover:bg-gray-200 transition-colors`}
+                          >
+                            <td className="whitespace-nowrap px-3 py-2">
+                              {new Date(
+                                feeding.feeding_date
+                              ).toLocaleDateString()}
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-2">
+                              {feeding.morning_fed ? (
+                                <span className="bg-green-500 text-white p-1 rounded">
+                                  Yes
+                                </span>
+                              ) : (
+                                <span className="bg-red-500 text-white p-1 rounded">
+                                  No
+                                </span>
+                              )}
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-2">
+                              {feeding.noon_fed ? (
+                                <span className="bg-green-500 text-white p-1 rounded">
+                                  Yes
+                                </span>
+                              ) : (
+                                <span className="bg-red-500 text-white p-1 rounded">
+                                  No
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </TabPanel>
         </Tabs>
       </div>
     </Modal>
