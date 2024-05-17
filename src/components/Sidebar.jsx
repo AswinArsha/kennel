@@ -1,21 +1,39 @@
-
+import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { HiMenu, HiX } from "react-icons/hi"; // Import icons from react-icons
 
 const Sidebar = () => {
   const location = useLocation(); // Get current route location
+  const [isOpen, setIsOpen] = useState(true); // State to manage sidebar open/close
+
+  // Function to toggle sidebar open/close
+  const toggleSidebar = () => {
+    setIsOpen(!isOpen);
+  };
 
   return (
-    <div className="w-60 bg-gray-800 text-white flex flex-col h-screen sticky top-0">
-      {" "}
-      {/* Fixed sidebar */}
-      <div className="p-4">
-        <h2 className="text-xl font-bold">Menu</h2> {/* Sidebar title */}
+    <div
+      className={`${
+        isOpen ? "w-60" : "w-20"
+      } bg-gray-800 text-white flex flex-col h-screen sticky top-0 transition-all duration-300 ease-in-out`}
+    >
+      {/* Sidebar header */}
+      <div className="p-4 flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold">Menu</h2>
+        </div>
+        {/* Menu toggle button */}
+        <button
+          className="text-white focus:outline-none lg:hidden"
+          onClick={toggleSidebar}
+        >
+          {isOpen ? <HiMenu size={24} /> : <HiX size={24} />}
+        </button>
       </div>
+
       {/* Navigation links */}
-      <nav className="flex-1">
+      <nav className="flex-1 overflow-y-auto">
         <ul className="space-y-2 p-4">
-          {" "}
-          {/* Add space between links */}
           <li>
             <Link
               to="/"
@@ -23,7 +41,12 @@ const Sidebar = () => {
                 location.pathname === "/" ? "bg-gray-700" : "hover:bg-gray-700"
               }`}
             >
-              Kennel Grid
+              <span className="flex items-center">
+                <span className="mr-2">
+                  <HiMenu size={20} />
+                </span>
+                Kennel Grid
+              </span>
             </Link>
           </li>
           <li>
@@ -35,7 +58,12 @@ const Sidebar = () => {
                   : "hover:bg-gray-700"
               }`}
             >
-              Make Reservation
+              <span className="flex items-center">
+                <span className="mr-2">
+                  <HiMenu size={20} />
+                </span>
+                Make Reservation
+              </span>
             </Link>
           </li>
           <li>
@@ -47,7 +75,12 @@ const Sidebar = () => {
                   : "hover:bg-gray-700"
               }`}
             >
-              Reservation List
+              <span className="flex items-center">
+                <span className="mr-2">
+                  <HiMenu size={20} />
+                </span>
+                Reservation List
+              </span>
             </Link>
           </li>
           <li>
@@ -59,7 +92,12 @@ const Sidebar = () => {
                   : "hover:bg-gray-700"
               }`}
             >
-              Feeding Schedule
+              <span className="flex items-center">
+                <span className="mr-2">
+                  <HiMenu size={20} />
+                </span>
+                Feeding Schedule
+              </span>
             </Link>
           </li>
           <li>
@@ -71,7 +109,12 @@ const Sidebar = () => {
                   : "hover:bg-gray-700"
               }`}
             >
-              Feeding Log History
+              <span className="flex items-center">
+                <span className="mr-2">
+                  <HiMenu size={20} />
+                </span>
+                Feeding Log History
+              </span>
             </Link>
           </li>
           <li>
@@ -83,25 +126,36 @@ const Sidebar = () => {
                   : "hover:bg-gray-700"
               }`}
             >
-              Customers
+              <span className="flex items-center">
+                <span className="mr-2">
+                  <HiMenu size={20} />
+                </span>
+                Customers
+              </span>
             </Link>
           </li>
           <li>
             <Link
-              to="/dashboard" // Link to the new Dashboard route
+              to="/dashboard"
               className={`block p-2 rounded-md ${
                 location.pathname === "/dashboard"
                   ? "bg-gray-700"
                   : "hover:bg-gray-700"
               }`}
             >
-              Dashboard
+              <span className="flex items-center">
+                <span className="mr-2">
+                  <HiMenu size={20} />
+                </span>
+                Dashboard
+              </span>
             </Link>
           </li>
         </ul>
       </nav>
+
       {/* Optional footer section */}
-      <div className="p-4">
+      <div className="p-4 mt-auto">
         <span>© {new Date().getFullYear()} Kennel Boarding</span>
       </div>
     </div>

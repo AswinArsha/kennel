@@ -1,5 +1,4 @@
 import React from "react";
-import PropTypes from "prop-types";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -40,27 +39,18 @@ const ReservationFilter = ({
           dateFormat="yyyy/MM/dd"
           placeholderText="Check In"
         />
+
         <DatePicker
           selected={filterEndDate}
           onChange={handleEndDateChange}
           className="p-2 border rounded-md"
           dateFormat="yyyy/MM/dd"
           placeholderText="Check Out"
+          minDate={filterStartDate} // Set minDate dynamically based on filterStartDate
         />
-      
       </div>
     </div>
   );
-};
-
-ReservationFilter.propTypes = {
-  searchQuery: PropTypes.string,
-  filterStartDate: PropTypes.instanceOf(Date),
-  filterEndDate: PropTypes.instanceOf(Date),
-  onSearchChange: PropTypes.func.isRequired,
-  onDateFilter: PropTypes.func.isRequired,
-  setFilterStartDate: PropTypes.func.isRequired,
-  setFilterEndDate: PropTypes.func.isRequired,
 };
 
 export default ReservationFilter;

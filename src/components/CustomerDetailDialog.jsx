@@ -50,38 +50,59 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
   useEffect(() => {
     const fetchCustomerDetail = async () => {
       if (customer) {
-        const { data: reservation, error } = await supabase
+        const { data: reservation, error: reservationError } = await supabase
           .from("reservations")
-          .select("*")
+          .select(`
+            *,
+            pet_information (
+              id,
+              dietary_requirements,
+              special_care_instructions,
+              medical_notes
+            )
+          `)
           .eq("kennel_ids", `{${customer.id}}`) // Filter by kennel ID
           .single();
-
-        if (error) {
-          console.error("Error fetching reservation details:", error.message);
+  
+        if (reservationError) {
+          console.error("Error fetching reservation details:", reservationError.message);
         } else {
-          const { data: pets, error: petError } = await supabase
-            .from("pet_information")
-            .select(
-              "*, reservation_id (pet_name, pet_breed, start_date, end_date, pickup, groom, drop)"
-            )
-            .eq("reservation_id", reservation.id); // Filter by reservation ID
-
-          if (petError) {
-            console.error("Error fetching pets:", petError.message);
-          } else {
-            const kennelNumbers = pets.map((pet) => customer.kennel_number);
-            setCustomerDetail({
-              customer_name: reservation.customer_name,
-              customer_phone: reservation.customer_phone,
-              customer_address: reservation.customer_address,
-              pets,
-              kennel_numbers: kennelNumbers,
-            });
-          }
+          const {
+            customer_name,
+            customer_phone,
+            customer_address,
+            pet_name,
+            pet_breed,
+            start_date,
+            end_date,
+            pickup,
+            groom,
+            drop,
+            pet_information,
+          } = reservation;
+  
+          setCustomerDetail({
+            customer_name,
+            customer_phone,
+            customer_address,
+            pets: [
+              {
+                pet_name,
+                pet_breed,
+                start_date,
+                end_date,
+                pickup,
+                groom,
+                drop,
+                ...pet_information[0],
+              },
+            ],
+            kennel_numbers: [customer.kennel_number],
+          });
         }
       }
     };
-
+  
     fetchCustomerDetail();
   }, [customer]);
 
@@ -205,100 +226,100 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
             </Tab>
           </TabList>
           <TabPanel>
-            <div className="flex flex-wrap gap-6">
-              {customerDetail.pets.map((pet) => (
-                <div key={pet.id} className="">
-                  <div className="flex gap-4">
-                    <div className="p-4 border rounded-md bg-gray-100 text-gray-800 w-72">
-                      <h3 className="text-lg font-semibold text-gray-700 mb-2">
-                        Pet Details
-                      </h3>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Pet Name:</span>
-                        <span>{pet.reservation_id.pet_name}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Pet Breed:</span>
-                        <span>{pet.reservation_id.pet_breed}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Check In:</span>
-                        <span>{pet.reservation_id.start_date}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Check Out:</span>
-                        <span>{pet.reservation_id.end_date}</span>
-                      </div>
-                    </div>
-
-                    <div className="p-4 border rounded-md bg-gray-100 text-gray-800 w-72">
-                      <h3 className="text-lg font-semibold text-gray-700 mb-2">
-                        Service Details
-                      </h3>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Pickup:</span>
-                        {pet.reservation_id.pickup ? (
-                          <span className="text-green-500">
-                            <FaCheck className="text-green-500" />
-                          </span>
-                        ) : (
-                          <span className="text-red-500">
-                            <FaTimes className="text-red-500" />
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Groom:</span>
-                        {pet.reservation_id.groom ? (
-                          <span className="text-green-500">
-                            <FaCheck className="text-green-500" />
-                          </span>
-                        ) : (
-                          <span className="text-red-500">
-                            <FaTimes className="text-red-500" />
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Drop:</span>
-                        {pet.reservation_id.drop ? (
-                          <span className="text-green-500">
-                            <FaCheck className="text-green-500" />
-                          </span>
-                        ) : (
-                          <span className="text-red-500">
-                            <FaTimes className="text-red-500" />
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-4  mt-4 border rounded-md bg-gray-100 text-gray-800 w-8/12">
-                    <h3 className="text-lg font-semibold text-gray-700 mb-2">
-                      Additional Details
-                    </h3>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">
-                        Dietary Requirements:
-                      </span>
-                      <span>{pet.dietary_requirements || "N/A"}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">
-                        Special Care Instructions:
-                      </span>
-                      <span>{pet.special_care_instructions || "N/A"}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Medical Notes:</span>
-                      <span>{pet.medical_notes || "N/A"}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
+  <div className="flex flex-wrap gap-6">
+    {customerDetail.pets && customerDetail.pets.length > 0 ? (
+      customerDetail.pets.map((pet) => (
+        <div key={pet.pet_name} className="">
+          <div className="flex gap-4">
+            <div className="p-4 border rounded-md bg-gray-100 text-gray-800 w-72">
+              <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                Pet Details
+              </h3>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Pet Name:</span>
+                <span>{pet.pet_name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Pet Breed:</span>
+                <span>{pet.pet_breed}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Check In:</span>
+                <span>{pet.start_date}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Check Out:</span>
+                <span>{pet.end_date}</span>
+              </div>
             </div>
-          </TabPanel>
+
+            <div className="p-4 border rounded-md bg-gray-100 text-gray-800 w-72">
+              <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                Service Details
+              </h3>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Pickup:</span>
+                {pet.pickup ? (
+                  <span className="text-green-500">
+                    <FaCheck className="text-green-500" />
+                  </span>
+                ) : (
+                  <span className="text-red-500">
+                    <FaTimes className="text-red-500" />
+                  </span>
+                )}
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Groom:</span>
+                {pet.groom ? (
+                  <span className="text-green-500">
+                    <FaCheck className="text-green-500" />
+                  </span>
+                ) : (
+                  <span className="text-red-500">
+                    <FaTimes className="text-red-500" />
+                  </span>
+                )}
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Drop:</span>
+                {pet.drop ? (
+                  <span className="text-green-500">
+                    <FaCheck className="text-green-500" />
+                  </span>
+                ) : (
+                  <span className="text-red-500">
+                    <FaTimes className="text-red-500" />
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="p-4 mt-4 border rounded-md bg-gray-100 text-gray-800 w-8/12">
+            <h3 className="text-lg font-semibold text-gray-700 mb-2">
+              Additional Details
+            </h3>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Dietary Requirements:</span>
+              <span>{pet.dietary_requirements || "N/A"}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Special Care Instructions:</span>
+              <span>{pet.special_care_instructions || "N/A"}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Medical Notes:</span>
+              <span>{pet.medical_notes || "N/A"}</span>
+            </div>
+          </div>
+        </div>
+      ))
+    ) : (
+      <p className="text-gray-600">No pet information available.</p>
+    )}
+  </div>
+</TabPanel>
 
           <TabPanel>
   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

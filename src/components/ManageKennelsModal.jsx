@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "../supabase";
 
 const ManageKennelsModal = ({ isOpen, onClose }) => {
@@ -6,13 +6,14 @@ const ManageKennelsModal = ({ isOpen, onClose }) => {
   const [selectedKennels, setSelectedKennels] = useState([]);
   const [unassignedKennels, setUnassignedKennels] = useState([]);
   const [error, setError] = useState("");
+  const [selectAll, setSelectAll] = useState(false);
 
   const fetchUnassignedKennels = async () => {
     try {
       const { data, error } = await supabase
         .from("kennels")
         .select("*")
-        .is("set_name", null);
+        .eq("set_name", "Maintenance");
 
       if (error) {
         throw error;
@@ -32,6 +33,15 @@ const ManageKennelsModal = ({ isOpen, onClose }) => {
         return [...prevSelectedKennels, kennel];
       }
     });
+  };
+
+  const handleSelectAll = () => {
+    if (selectAll) {
+      setSelectedKennels([]);
+    } else {
+      setSelectedKennels(unassignedKennels);
+    }
+    setSelectAll(!selectAll);
   };
 
   const handleCreateSet = async () => {
@@ -69,9 +79,17 @@ const ManageKennelsModal = ({ isOpen, onClose }) => {
     }
   };
 
-  useState(() => {
+  useEffect(() => {
     fetchUnassignedKennels();
   }, []);
+
+  useEffect(() => {
+    if (selectedKennels.length === unassignedKennels.length) {
+      setSelectAll(true);
+    } else {
+      setSelectAll(false);
+    }
+  }, [selectedKennels, unassignedKennels]);
 
   return (
     <div
@@ -121,6 +139,18 @@ const ManageKennelsModal = ({ isOpen, onClose }) => {
                   <h4 className="text-md font-semibold mb-2">
                     Unassigned Kennels
                   </h4>
+                  <div className="flex items-center mb-4">
+                    <input
+                      type="checkbox"
+                      id="select-all"
+                      className="mr-2"
+                      checked={selectAll}
+                      onChange={handleSelectAll}
+                    />
+                    <label htmlFor="select-all" className="text-sm">
+                      Select All
+                    </label>
+                  </div>
                   <div className="grid grid-cols-3 gap-4">
                     {unassignedKennels.map((kennel) => (
                       <div

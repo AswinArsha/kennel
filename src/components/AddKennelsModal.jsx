@@ -36,7 +36,7 @@ const AddKennelsModal = ({ isOpen, onClose }) => {
       const newKennels = Array.from({ length: numKennels }, (_, index) => ({
         kennel_number: startingKennelNumber + index,
         status: "available",
-        set_name: null,
+        set_name: 'Maintenance',
       }));
 
       const { error: insertKennelsError } = await supabase

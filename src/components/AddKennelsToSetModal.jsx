@@ -11,8 +11,8 @@ const AddKennelsToSetModal = ({ isOpen, onClose, setName, onKennelsAdded }) => {
         const { data, error } = await supabase
           .from("kennels")
           .select("*")
-          .is("set_name", null);
-
+          .eq("set_name", "Maintenance");
+    
         if (error) {
           throw error;
         } else {
@@ -22,9 +22,10 @@ const AddKennelsToSetModal = ({ isOpen, onClose, setName, onKennelsAdded }) => {
         console.error("Error fetching unassigned kennels:", error.message);
       }
     };
-
+  
     fetchUnassignedKennels();
   }, []);
+
 
   const handleKennelSelection = (kennel) => {
     setSelectedKennels((prevSelectedKennels) => {

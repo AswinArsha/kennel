@@ -72,13 +72,12 @@ const KennelGrid = () => {
   };
 
   // Handle kennel click
-// Handle kennel click
-const handleKennelClick = (kennel) => {
-  if (kennel.status === "occupied") {
-    setSelectedKennel(kennel);
-    setIsCustomerDetailDialogOpen(true);
-  }
-};
+  const handleKennelClick = (kennel) => {
+    if (kennel.status === "occupied" || kennel.status === "reserved") {
+      setSelectedKennel(kennel);
+      setIsCustomerDetailDialogOpen(true);
+    }
+  };
 
   // Group kennels by set names
   const groupedKennels = kennels.reduce((acc, kennel) => {

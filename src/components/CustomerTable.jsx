@@ -1,47 +1,40 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../supabase";
-import ReservationFilter from "./ReservationFilter"; // For search and filter functionalities
+import CustomerFilter from "./CustomerFilter";
 
-const CustomerTable = ({ onViewCustomer }) => {
+import { FaCheck, FaTimes } from "react-icons/fa"; // Font Awesome icons for check and cross
+
+const CustomerTable = ({
+  onViewCustomer,
+  onConfirm,
+  onCancel,
+  onEdit,
+  onCheckout,
+}) => {
   const [customers, setCustomers] = useState([]);
-  const [searchQuery, setSearchQuery] = useState("");
   const [filteredCustomers, setFilteredCustomers] = useState([]);
-  const [filterStartDate, setFilterStartDate] = useState(null);
-  const [filterEndDate, setFilterEndDate] = useState(null);
 
   const fetchCustomers = async () => {
     const { data: reservations, error } = await supabase
       .from("reservations")
       .select(
-        "id, customer_name, customer_phone, kennel_ids, start_date, end_date"
+        "id, customer_name, customer_phone, customer_address, pet_name, pet_breed, start_date, end_date, status, created_at, kennel_ids, pickup, groom, drop"
       );
 
     if (error) {
       console.error("Error fetching customers:", error.message);
     } else {
-      // Fetch additional data from pet_information
+      // Fetch additional data from pet_information and kennels
       const enhancedReservations = await Promise.all(
         reservations.map(async (reservation) => {
-          const { data: petInfo, error: petError } = await supabase
-            .from("pet_information")
-            .select("pet_name, breed")
-            .eq("kennel_id", reservation.kennel_ids[0]) // Assuming a single kennel per reservation
-            .single();
-
-          if (petError) {
-            console.error("Error fetching pet information:", petError.message);
-          }
-
           const { data: kennels } = await supabase
             .from("kennels")
             .select("kennel_number")
-            .in("id", reservation.kennel_ids || []); // Fetch kennel numbers
+            .in("id", reservation.kennel_ids || []);
 
           return {
             ...reservation,
-            kennel_numbers: kennels.map((k) => k.kennel_number), // Extract kennel numbers
-            pet_name: petInfo?.pet_name || "Unknown", // Extract pet name
-            breed: petInfo?.breed || "Unknown", // Extract breed name
+            kennel_numbers: kennels.map((k) => k.kennel_number),
           };
         })
       );
@@ -51,91 +44,122 @@ const CustomerTable = ({ onViewCustomer }) => {
     }
   };
 
-  // Handle search
   const handleSearch = (query) => {
-    setSearchQuery(query);
     const lowerQuery = query.toLowerCase();
-    setFilteredCustomers(
-      customers.filter(
-        (customer) =>
-          customer.customer_name.toLowerCase().includes(lowerQuery) ||
-          customer.pet_name.toLowerCase().includes(lowerQuery) ||
-          customer.breed.toLowerCase().includes(lowerQuery)
-      )
+    const filtered = customers.filter(
+      (customer) =>
+        customer.customer_name.toLowerCase().includes(lowerQuery) ||
+        customer.pet_name.toLowerCase().includes(lowerQuery) ||
+        customer.pet_breed.toLowerCase().includes(lowerQuery)
     );
+    setFilteredCustomers(filtered);
   };
 
-  // Handle date filtering
-  useEffect(() => {
-    if (filterStartDate && filterEndDate) {
-      setFilteredCustomers(
-        customers.filter(
-          (customer) =>
-            new Date(customer.start_date) >= filterStartDate &&
-            new Date(customer.end_date) <= filterEndDate
-        )
+  const handleDateFilter = (startDate, endDate, status) => {
+    let filtered = customers;
+  
+    if (startDate && endDate) {
+      filtered = filtered.filter(
+        (customer) =>
+          new Date(customer.start_date) >= startDate &&
+          new Date(customer.end_date) <= endDate.setHours(23, 59, 59, 999) // Include end date
       );
-    } else {
-      setFilteredCustomers(customers); // Reset if no filter is applied
     }
-  }, [filterStartDate, filterEndDate, customers]);
+  
+    if (status) {
+      filtered = filtered.filter((customer) => customer.status === status);
+    }
+  
+    setFilteredCustomers(filtered);
+  };
+  const handleStatusFilter = (startDate, endDate, status) => {
+    handleDateFilter(startDate, endDate, status);
+  };
 
   useEffect(() => {
     fetchCustomers(); // Fetch on component mount
   }, []);
 
   return (
-    <div>
-      <ReservationFilter
-        searchQuery={searchQuery}
-        filterStartDate={filterStartDate}
-        filterEndDate={filterEndDate}
-        onSearchChange={handleSearch}
-        onFilterStartDateChange={setFilterStartDate}
-        onFilterEndDateChange={setFilterEndDate}
+    <div className="max-w-5xl mx-auto">
+      <CustomerFilter
+        onSearch={handleSearch}
+        onDateFilter={handleDateFilter}
+        onStatusFilter={handleStatusFilter}
       />
 
-      <table className="w-full border-collapse">
-        <thead>
-          <tr>
-            <th className="p-3 text-left border">Customer Name</th>
-            <th className="p-3 text-left border">Phone</th>
-            <th className="p-3 text-left border">Kennel Number(s)</th>
-            <th className="p-3 text-left border">Start Date</th>
-            <th className="p-3 text-left border">End Date</th>
-            <th className="p-3 text-left border">Pet Name</th>
-            <th className="p-3 text-left border">Breed</th>
-            <th className="p-3 text-left border">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filteredCustomers.map((customer) => (
-            <tr key={customer.id} className="hover:bg-gray-100">
-              <td className="p-3 border">{customer.customer_name}</td>
-              <td className="p-3 border">{customer.customer_phone}</td>
-              <td className="p-3 border">
-                {customer.kennel_numbers.join(", ")}
-              </td>
-              <td className="p-3 border">
-                {new Date(customer.start_date).toLocaleDateString()}
-              </td>
-              <td className="p-3 border">
-                {new Date(customer.end_date).toLocaleDateString()}
-              </td>
-              <td className="p-3 border">{customer.pet_name}</td>
-              <td className="p-3 border">{customer.breed}</td>
-              <td className="p-3 border">
-                <button
-                  className="bg-blue-500 text-white px-4 py-2 rounded-md"
-                  onClick={() => onViewCustomer(customer)}
-                >
-                  View
-                </button>
-              </td>
+      <div className="overflow-x-auto rounded-lg border border-gray-200 mt-4">
+        <table className="min-w-full divide-y-2 divide-gray-200 bg-white text-sm">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
+                Customer Name
+              </th>
+              <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
+                Phone
+              </th>
+              <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
+                Address
+              </th>
+              <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
+                Check In
+              </th>
+              <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
+                Check Out
+              </th>
+              <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
+                Breed
+              </th>
+              <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
+                Reservation Date
+              </th>
+              <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
+                Status
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody className="divide-y divide-gray-200">
+            {filteredCustomers.map((customer) => (
+              <tr key={customer.id} className="bg-white hover:bg-gray-100">
+                <td className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
+                  {customer.customer_name}
+                </td>
+                <td className="whitespace-nowrap px-4 py-2 text-gray-700">
+                  {customer.customer_phone}
+                </td>
+                <td className="whitespace-nowrap px-4 py-2 text-gray-700">
+                  {customer.customer_address}
+                </td>
+                <td className="whitespace-nowrap px-4 py-2 text-gray-700">
+                  {new Date(customer.start_date).toLocaleDateString()}
+                </td>
+                <td className="whitespace-nowrap px-4 py-2 text-gray-700">
+                  {new Date(customer.end_date).toLocaleDateString()}
+                </td>
+                <td className="whitespace-nowrap px-4 py-2 text-gray-700">
+                  {customer.pet_breed}
+                </td>
+                <td className="whitespace-nowrap px-4 py-2 text-gray-700">
+                  {new Date(customer.created_at).toLocaleDateString()}
+                </td>
+                <td className="whitespace-nowrap px-4 py-2 text-gray-800">
+                  <span
+                    className={`rounded py-1 px-3 text-xs font-bold ${
+                      customer.status === "confirmed"
+                        ? "bg-green-400"
+                        : customer.status === "canceled"
+                        ? "bg-red-400"
+                        : "bg-yellow-400"
+                    }`}
+                  >
+                    {customer.status}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };

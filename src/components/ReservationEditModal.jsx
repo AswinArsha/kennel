@@ -39,32 +39,43 @@ const ReservationEditModal = ({
             .select("*")
             .eq("id", selectedReservation.id)
             .single();
-
-        const { data: petData, error: petError } = await supabase
-          .from("pet_information")
-          .select("*")
-          .eq("kennel_id", selectedReservation.kennel_ids[0])
-          .single();
-
+  
         if (!reservationError && reservationData) {
           setReservationInfo(reservationData);
         } else {
           console.error("Error fetching reservation info:", reservationError);
         }
-
+  
+        const { data: petData, error: petError } = await supabase
+          .from("pet_information")
+          .select("*")
+          .eq("reservation_id", selectedReservation.id)
+          .single();
+  
         if (!petError && petData) {
           setPetInfo(petData);
         } else {
-          setPetInfo({
-            dietary_requirements: "",
-            special_care_instructions: "",
-            medical_notes: "",
-          });
-          console.error("Error fetching pet info:", petError);
+          // Check if there is no existing pet information entry
+          const { error: noDataError } = await supabase
+            .from("pet_information")
+            .select("*")
+            .eq("reservation_id", selectedReservation.id)
+            .single();
+  
+          if (noDataError && noDataError.code === "PGRST116") {
+            // If there is no existing entry, set default values for pet information
+            setPetInfo({
+              dietary_requirements: "",
+              special_care_instructions: "",
+              medical_notes: "",
+            });
+          } else {
+            console.error("Error fetching pet info:", petError);
+          }
         }
       }
     };
-
+  
     fetchInfo();
   }, [selectedReservation]);
 
@@ -88,16 +99,31 @@ const ReservationEditModal = ({
         })
         .eq("id", selectedReservation.id);
 
-      const { error: petError } = await supabase
-        .from("pet_information")
-        .upsert({
-          id: petInfo.id,
-          kennel_id: selectedReservation.kennel_ids[0],
-          reservation_id: selectedReservation.id,
-          dietary_requirements: petInfo.dietary_requirements,
-          special_care_instructions: petInfo.special_care_instructions,
-          medical_notes: petInfo.medical_notes,
-        });
+      let petError = null;
+      if (petInfo.id) {
+        const { error } = await supabase
+          .from("pet_information")
+          .update({
+            dietary_requirements: petInfo.dietary_requirements,
+            special_care_instructions: petInfo.special_care_instructions,
+            medical_notes: petInfo.medical_notes,
+          })
+          .eq("id", petInfo.id);
+
+        petError = error;
+      } else {
+        const { error } = await supabase
+          .from("pet_information")
+          .insert({
+            kennel_id: selectedReservation.kennel_ids[0],
+            reservation_id: selectedReservation.id,
+            dietary_requirements: petInfo.dietary_requirements,
+            special_care_instructions: petInfo.special_care_instructions,
+            medical_notes: petInfo.medical_notes,
+          });
+
+        petError = error;
+      }
 
       if (!reservationError && !petError) {
         onClose();
@@ -333,5 +359,3 @@ ReservationEditModal.propTypes = {
 };
 
 export default ReservationEditModal;
-
-                   

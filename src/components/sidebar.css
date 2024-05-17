@@ -1,0 +1,10 @@
+/* sidebar.css */
+.sidebar {
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  
+  .sidebar .icon {
+    visibility: visible;
+  }
+  
