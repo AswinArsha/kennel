@@ -139,9 +139,12 @@ const ReservationForm = () => {
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium">Customer Name</label>
+          <label htmlFor="customerName" className="block text-sm font-medium">
+            Customer Name
+          </label>
           <input
             type="text"
+            id="customerName"
             className={`w-full p-2 border rounded-md focus:border-blue-500 ${
               errors.customerName ? "border-red-500" : ""
             }`}
@@ -154,9 +157,12 @@ const ReservationForm = () => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium">Customer Phone</label>
+          <label htmlFor="customerPhone" className="block text-sm font-medium">
+            Customer Phone
+          </label>
           <input
             type="text"
+            id="customerPhone"
             className={`w-full p-2 border rounded-md focus:border-blue-500 ${
               errors.customerPhone ? "border-red-500" : ""
             }`}
@@ -169,9 +175,15 @@ const ReservationForm = () => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium">Customer Address</label>
+          <label
+            htmlFor="customerAddress"
+            className="block text-sm font-medium"
+          >
+            Customer Address
+          </label>
           <input
             type="text"
+            id="customerAddress"
             className={`w-full p-2 border rounded-md focus:border-blue-500 ${
               errors.customerAddress ? "border-red-500" : ""
             }`}
@@ -184,9 +196,12 @@ const ReservationForm = () => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium">Pet Name</label>
+          <label htmlFor="petName" className="block text-sm font-medium">
+            Pet Name
+          </label>
           <input
             type="text"
+            id="petName"
             className={`w-full p-2 border rounded-md focus:border-blue-500 ${
               errors.petName ? "border-red-500" : ""
             }`}
@@ -199,9 +214,12 @@ const ReservationForm = () => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium">Pet Breed</label>
+          <label htmlFor="petBreed" className="block text-sm font-medium">
+            Pet Breed
+          </label>
           <input
             type="text"
+            id="petBreed"
             className={`w-full p-2 border rounded-md focus:border-blue-500 ${
               errors.petBreed ? "border-red-500" : ""
             }`}
@@ -215,8 +233,11 @@ const ReservationForm = () => {
 
         <div className="flex gap-4">
           <div>
-            <label className="block text-sm font-medium">Check In</label>
+            <label htmlFor="startDate" className="block text-sm font-medium">
+              Check In
+            </label>
             <DatePicker
+              id="startDate"
               selected={startDate}
               onChange={(date) => setStartDate(date)}
               className={`w-full p-2 border rounded-md ${
@@ -232,8 +253,11 @@ const ReservationForm = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium">Check Out</label>
+            <label htmlFor="endDate" className="block text-sm font-medium">
+              Check Out
+            </label>
             <DatePicker
+              id="endDate"
               selected={endDate}
               onChange={(date) => setEndDate(date)}
               className={`w-full p-2 border rounded-md ${
@@ -314,8 +338,8 @@ const ReservationForm = () => {
                 <div className="flex items-center">
                   <input
                     type="checkbox"
-                    className="size-4 rounded border-gray-300"
                     id="pickup"
+                    className="size-4 rounded border-gray-300"
                     checked={pickup}
                     onChange={() => setPickup(!pickup)}
                   />
@@ -330,8 +354,8 @@ const ReservationForm = () => {
                 <div className="flex items-center">
                   <input
                     type="checkbox"
-                    className="size-4 rounded border-gray-300"
                     id="groom"
+                    className="size-4 rounded border-gray-300"
                     checked={groom}
                     onChange={() => setGroom(!groom)}
                   />
@@ -346,8 +370,8 @@ const ReservationForm = () => {
                 <div className="flex items-center">
                   <input
                     type="checkbox"
-                    className="size-4 rounded border-gray-300"
                     id="drop"
+                    className="size-4 rounded border-gray-300"
                     checked={drop}
                     onChange={() => setDrop(!drop)}
                   />
@@ -361,7 +385,7 @@ const ReservationForm = () => {
         <div className="flex justify-between mt-6">
           <button
             type="button"
-            className="bg-blue-500 text-white px-4 py-2 rounded-md"
+            className="bg-blue-500 text-white px-6 py-3 rounded-md hover:bg-blue-600 focus:outline-none"
             onClick={createReservation}
           >
             Create Reservation
@@ -369,7 +393,7 @@ const ReservationForm = () => {
 
           <button
             type="button"
-            className="bg-gray-300 text-gray-800 px-4 py-2 rounded-md"
+            className="bg-gray-300 text-gray-800 px-6 py-3 rounded-md hover:bg-gray-400 focus:outline-none"
             onClick={clearForm}
           >
             Clear Form
@@ -386,7 +410,7 @@ const ReservationForm = () => {
             </p>
             <button
               type="button"
-              className="mt-4 bg-blue-500 text-white px-4 py-2 rounded-md"
+              className="mt-4 bg-blue-500 text-white px-6 py-3 rounded-md hover:bg-blue-600 focus:outline-none"
               onClick={() => setIsDialogOpen(false)}
             >
               OK

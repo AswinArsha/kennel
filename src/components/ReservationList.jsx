@@ -121,7 +121,6 @@ const ReservationList = () => {
     }
   };
 
-
   return (
     <div>
       <h2 className="text-2xl font-bold mb-4">Reservation List</h2>

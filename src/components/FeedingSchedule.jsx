@@ -55,22 +55,22 @@ const FeedingSchedule = () => {
   }, [selectedDate]);
 
   return (
-    <div className="max-w-xl mx-auto p-6 bg-white rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold mb-4">Feeding Schedule Tracker</h2>
+    <div className="max-w-3xl mx-auto p-6 bg-white shadow-md rounded-lg">
+      <h2 className="text-2xl font-semibold mb-4">Feeding Schedule Tracker</h2>
 
-      <div className="flex items-center gap-4 mb-4">
+      <div className="flex flex-col sm:flex-row gap-4 items-center mb-6">
         <DatePicker
           selected={selectedDate}
           onChange={(date) => setSelectedDate(date)}
-          className="p-2 border rounded-md"
           dateFormat="yyyy/MM/dd"
           placeholderText="Select date"
+          className="border border-gray-300 p-2 rounded-md focus:ring-2 focus:ring-blue-500"
         />
 
         <select
-          className="p-2 border rounded-md"
           value={feedingTime}
           onChange={(e) => setFeedingTime(e.target.value)}
+          className="border border-gray-300 p-2 rounded-md focus:ring-2 focus:ring-blue-500"
         >
           <option value="morning">Morning</option>
           <option value="noon">Noon</option>
@@ -79,37 +79,51 @@ const FeedingSchedule = () => {
 
       {selectedDate && (
         <div>
-          <h3 className="text-lg font-semibold mb-2">Occupied Kennels</h3>
-          <div className="grid grid-cols-5 gap-4">
-            {occupiedKennels.map((kennel) => (
-              <div
-                key={kennel.id}
-                className={`p-4 rounded-md bg-${feedingStatus[kennel.id] ? "green-500" : "gray-200"
-                  }`}
-              >
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={feedingStatus[kennel.id] || false}
-                    onChange={() => {
-                      setFeedingStatus((prev) => ({
-                        ...prev,
-                        [kennel.id]: !prev[kennel.id],
-                      }));
-                    }}
-                  />
-                  Kennel {kennel.kennel_number}
-                </label>
+          <h3 className="text-xl font-medium mb-4">Occupied Kennels</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {occupiedKennels.reduce((acc, kennel) => {
+              const setIndex = acc.findIndex(
+                (item) => item.name === kennel.set_name
+              );
+              if (setIndex === -1) {
+                acc.push({ name: kennel.set_name, kennels: [kennel] });
+              } else {
+                acc[setIndex].kennels.push(kennel);
+              }
+              return acc;
+            }, []).map((set) => (
+              <div key={set.name}>
+                <h4 className="text-lg font-semibold mt-4">{set.name}</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  {set.kennels.map((kennel) => (
+                    <div
+                      key={kennel.id}
+                      className={`p-4 text-center rounded-md cursor-pointer transition-all ${
+                        feedingStatus[kennel.id]
+                          ? "bg-green-500 text-white"
+                          : "bg-gray-200 hover:bg-gray-300"
+                      }`}
+                      onClick={() => {
+                        setFeedingStatus((prev) => ({
+                          ...prev,
+                          [kennel.id]: !prev[kennel.id],
+                        }));
+                      }}
+                    >
+                      Kennel {kennel.kennel_number}
+                    </div>
+                  ))}
+                </div>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      <div className="mt-4">
+      <div className="mt-6 flex justify-end">
         <button
-          className="bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600"
           onClick={handleSubmit}
+          className="bg-blue-500 text-white px-6 py-3 rounded-md hover:bg-blue-600 focus:outline-none"
         >
           Submit
         </button>
@@ -123,9 +137,8 @@ const FeedingSchedule = () => {
               The feeding status has been successfully submitted.
             </p>
             <button
-              type="button"
-              className="mt-4 bg-blue-500 text-white px-4 py-2 rounded-md"
               onClick={() => setIsDialogOpen(false)}
+              className="mt-4 bg-blue-500 text-white px-6 py-3 rounded-md hover:bg-blue-600 focus:outline-none"
             >
               OK
             </button>

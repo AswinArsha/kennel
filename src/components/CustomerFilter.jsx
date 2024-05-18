@@ -64,7 +64,7 @@ const CustomerFilter = ({ onSearch, onDateFilter, onStatusFilter }) => {
           onChange={handleStatusChange}
         >
           <option value="">All Statuses</option>
-          <option value="confirmed">Confirmed</option>
+          <option value="checkout">Check Out</option>
           <option value="canceled">Canceled</option>
           
         </select>

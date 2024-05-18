@@ -145,7 +145,8 @@ const CustomerTable = ({
                 <td className="whitespace-nowrap px-4 py-2 text-gray-800">
                   <span
                     className={`rounded py-1 px-3 text-xs font-bold ${
-                      customer.status === "confirmed"
+                      customer.status === "checkout"
+                     
                         ? "bg-green-400"
                         : customer.status === "canceled"
                         ? "bg-red-400"

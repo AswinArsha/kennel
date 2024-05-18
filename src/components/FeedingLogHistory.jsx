@@ -75,25 +75,30 @@ const FeedingLogHistory = () => {
   const downloadPDF = () => {
     const doc = new jsPDF();
     const filteredData = applyFilters();
-  
+
     // Set font style and size
     doc.setFont("helvetica");
     doc.setFontSize(12);
-  
+
     // Add document title
     doc.text("Feeding Log History", 14, 15);
-  
+
     // Define table headers
-    const headers = [ "Feeding Date", "Fed (Morning)", "Fed (Noon)"];
-  
+    const headers = [
+      "Kennel Number",
+      "Feeding Date",
+      "Fed (Morning)",
+      "Fed (Noon)",
+    ];
+
     // Map data for the table
     const data = filteredData.map((entry) => [
-     
+      entry.kennel_number,
       formatDate(new Date(entry.feeding_date)),
       entry.morning_fed ? "Yes" : "No",
       entry.noon_fed ? "Yes" : "No",
     ]);
-  
+
     // Add table to the document
     doc.autoTable({
       startY: 20, // Start table from 20 units down
@@ -119,11 +124,10 @@ const FeedingLogHistory = () => {
         fillColor: [245, 245, 245], // Alternate row background color
       },
     });
-  
+
     // Save the PDF file
     doc.save("feeding_log_history.pdf");
   };
-  
 
   useEffect(() => {
     fetchFeedingHistory();
@@ -131,15 +135,17 @@ const FeedingLogHistory = () => {
 
   return (
     <div className="container mx-auto p-4">
-      <h2 className="text-2xl font-bold mb-4">Feeding Log History</h2>
+      <h2 className="text-3xl font-semibold mb-6 text-gray-800">
+        Feeding Log History
+      </h2>
 
-      <div className="sticky top-0 bg-white z-20 pb-2">
+      <div className=" top-0 bg-white pb-4">
         <div className="flex gap-4 mb-4">
           <div className="relative">
             <DatePicker
               selected={filterDate}
               onChange={(date) => setFilterDate(date)}
-              className="w-full p-2 border rounded-md"
+              className="w-full p-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               dateFormat="yyyy/MM/dd"
               placeholderText="Filter by date"
               popperPlacement="bottom-start"
@@ -162,7 +168,7 @@ const FeedingLogHistory = () => {
           <div className="relative">
             <input
               type="text"
-              className="w-full p-2 border rounded-md"
+              className="w-full p-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               placeholder="Kennel Number"
               value={filterKennelNumber}
               onChange={(e) => setFilterKennelNumber(e.target.value)}
@@ -183,14 +189,14 @@ const FeedingLogHistory = () => {
           </div>
 
           <button
-            className="bg-red-500 text-white p-2 rounded-md hover:bg-red-600"
+            className="bg-red-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-red-600 transition-colors duration-300"
             onClick={clearFilters}
           >
             Clear Filters
           </button>
 
           <button
-            className="bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600"
+            className="bg-indigo-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-indigo-600 transition-colors duration-300"
             onClick={downloadPDF}
           >
             Download PDF
@@ -198,35 +204,40 @@ const FeedingLogHistory = () => {
         </div>
       </div>
 
-      <div className="overflow-y-auto max-h-[500px] shadow-md">
-        <table className="border-collapse w-full text-center">
-          <thead className="sticky top-0 bg-gray-200 z-10">
+      <div className="overflow-x-auto rounded-lg border border-gray-200">
+        <table className="min-w-full divide-y-2 divide-gray-200 bg-white text-sm">
+          <thead className="bg-gray-100">
             <tr>
-              <th className="p-3 font-bold uppercase bg-gray-200 text-gray-600 border">
+              <th className="whitespace-nowrap px-4 py-2 font-semibold text-gray-900">
                 Kennel Number
               </th>
-              <th className="p-3 font-bold uppercase bg-gray-200 text-gray-600 border">
+              <th className="whitespace-nowrap px-4 py-2 font-semibold text-gray-900">
                 Feeding Date
               </th>
-              <th className="p-3 font-bold uppercase bg-gray-200 text-gray-600 border">
+              <th className="whitespace-nowrap px-4 py-2 font-semibold text-gray-900">
                 Fed (Morning)
               </th>
-              <th className="p-3 font-bold uppercase bg-gray-200 text-gray-600 border">
+              <th className="whitespace-nowrap px-4 py-2 font-semibold text-gray-900">
                 Fed (Noon)
               </th>
             </tr>
           </thead>
 
-          <tbody>
+          <tbody className="divide-y divide-gray-200">
             {applyFilters().map((entry, index) => (
-              <tr key={index} className="bg-white hover:bg-gray-100">
-                <td className="p-3 text-gray-800 border">
+              <tr
+                key={index}
+                className={`${
+                  index % 2 === 0 ? "bg-gray-50" : "bg-white"
+                } hover:bg-gray-100 transition-colors duration-300`}
+              >
+                <td className="whitespace-nowrap text-center px-4 py-2 font-medium text-gray-900">
                   {entry.kennel_number}
                 </td>
-                <td className="p-3 text-gray-800 border">
+                <td className="whitespace-nowrap px-4 text-center py-2 text-gray-700">
                   {formatDate(new Date(entry.feeding_date))}
                 </td>
-                <td className="p-3 text-gray-800 border">
+                <td className="whitespace-nowrap text-center px-4 py-2 text-gray-700">
                   {entry.morning_fed ? (
                     <span className="bg-green-500 text-white p-1 rounded">
                       Yes
@@ -237,7 +248,7 @@ const FeedingLogHistory = () => {
                     </span>
                   )}
                 </td>
-                <td className="p-3 text-gray-800 border">
+                <td className="whitespace-nowrap text-center px-4 py-2 text-gray-700">
                   {entry.noon_fed ? (
                     <span className="bg-green-500 text-white p-1 rounded">
                       Yes
