@@ -277,7 +277,7 @@ const ReservationForm = () => {
           <div>
             <h3 className="text-lg font-semibold pb-3">Select Kennels</h3>
             <div className="space-y-2">
-              {availableKennels.length === 0 && <p>No available kennels</p>}
+              {availableKennels.length === 0 && <p>No kennels available</p>}
               {availableKennels.length > 0 &&
                 availableKennels
                   .reduce((acc, kennel) => {

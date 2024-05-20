@@ -3,6 +3,7 @@ import { supabase } from "../supabase";
 import ReservationFilter from "./ReservationFilter";
 import ReservationTable from "./ReservationTable";
 import ReservationEditModal from "./ReservationEditModal";
+import BillGenerationModal from "./BillGenerationModal";
 
 const ReservationList = () => {
   const [reservations, setReservations] = useState([]);
@@ -12,6 +13,7 @@ const ReservationList = () => {
   const [filterEndDate, setFilterEndDate] = useState(null);
   const [selectedReservation, setSelectedReservation] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
 
   const fetchReservations = async () => {
     const { data, error } = await supabase
@@ -121,6 +123,17 @@ const ReservationList = () => {
     }
   };
 
+  useEffect(() => {
+    const filterReservations = () => {
+      const filtered = reservations.filter(
+        (reservation) => reservation.status !== "checkout"
+      );
+      setFilteredReservations(filtered);
+    };
+
+    filterReservations();
+  }, [reservations]);
+
   return (
     <div>
       <h2 className="text-2xl font-bold mb-4">Reservation List</h2>
@@ -133,12 +146,15 @@ const ReservationList = () => {
           if (query) {
             const lowerQuery = query.toLowerCase();
             setFilteredReservations(
-              reservations.filter((reservation) =>
+              filteredReservations.filter((reservation) =>
                 reservation.customer_name.toLowerCase().includes(lowerQuery)
               )
             );
           } else {
-            setFilteredReservations(reservations);
+            const filtered = reservations.filter(
+              (reservation) => reservation.status !== "checkout"
+            );
+            setFilteredReservations(filtered);
           }
         }}
         onDateFilter={handleDateFilter}
@@ -153,7 +169,14 @@ const ReservationList = () => {
           setSelectedReservation(reservation);
           setIsEditModalOpen(true);
         }}
-        onCheckout={checkoutReservation}
+        onCheckout={(reservation) => {
+          setSelectedReservation(reservation);
+          setIsCheckoutModalOpen(true);
+        }}
+        isCheckoutModalOpen={isCheckoutModalOpen}
+        setIsCheckoutModalOpen={setIsCheckoutModalOpen}
+        selectedReservation={selectedReservation}
+        setSelectedReservation={setSelectedReservation}
       />
       {isEditModalOpen && (
         <ReservationEditModal
@@ -161,6 +184,13 @@ const ReservationList = () => {
           isOpen={isEditModalOpen}
           onClose={() => setIsEditModalOpen(false)}
           onSave={fetchReservations}
+        />
+      )}
+      {isCheckoutModalOpen && (
+        <BillGenerationModal
+          isOpen={isCheckoutModalOpen}
+          onClose={() => setIsCheckoutModalOpen(false)}
+          selectedReservation={selectedReservation}
         />
       )}
     </div>

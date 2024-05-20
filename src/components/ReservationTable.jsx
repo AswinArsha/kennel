@@ -1,13 +1,23 @@
 import React from "react";
 import { FaCheck, FaTimes } from "react-icons/fa";
+import BillGenerationModal from "./BillGenerationModal";
 
 const ReservationTable = ({
   reservations,
   onConfirm,
+  onCancel,
   onEdit,
   onCheckout,
-  onCancel,
+  isCheckoutModalOpen,
+  setIsCheckoutModalOpen,
+  selectedReservation,
+  setSelectedReservation,
 }) => {
+  const handleCheckout = (reservation) => {
+    setSelectedReservation(reservation);
+    setIsCheckoutModalOpen(true);
+  };
+
   return (
     <div className="overflow-x-auto rounded-lg border border-gray-200">
       <table className="min-w-full divide-y-2 divide-gray-200 bg-white text-sm">
@@ -126,7 +136,7 @@ const ReservationTable = ({
                     </button>
                     <button
                       className="bg-indigo-500 text-white py-1 px-2 rounded-md hover:bg-indigo-600 ml-2"
-                      onClick={() => onCheckout(reservation)}
+                      onClick={() => handleCheckout(reservation)}
                     >
                       Checkout
                     </button>
@@ -137,6 +147,13 @@ const ReservationTable = ({
           ))}
         </tbody>
       </table>
+      {isCheckoutModalOpen && (
+        <BillGenerationModal
+          isOpen={isCheckoutModalOpen}
+          onClose={() => setIsCheckoutModalOpen(false)}
+          selectedReservation={selectedReservation}
+        />
+      )}
     </div>
   );
 };
