@@ -78,7 +78,7 @@ const AddKennelsToSetModal = ({ isOpen, onClose, setName, onKennelsAdded }) => {
                   Add Kennels to Set
                 </h3>
                 <div>
-                  <h4 className="text-md font-semibold mb-2">Unassigned Kennels</h4>
+                 
                   <div className="grid grid-cols-3 gap-4">
                     {unassignedKennels.map((kennel) => (
                       <div

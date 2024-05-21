@@ -32,11 +32,11 @@ const CustomerFilter = ({ onSearch, onDateFilter, onStatusFilter }) => {
   };
 
   return (
-    <div className="flex justify-between items-center mb-4">
-      <div className="relative">
+    <div className="flex flex-wrap justify-between items-center mb-4 gap-4">
+      <div className="relative w-full sm:w-auto">
         <input
           type="text"
-          className="p-2 pl-8 pr-4 border rounded-md w-64"
+          className="p-2 pl-8 pr-4 border rounded-md w-full sm:w-64"
           placeholder="Search by customer name"
           value={searchQuery}
           onChange={handleSearch}
@@ -44,23 +44,23 @@ const CustomerFilter = ({ onSearch, onDateFilter, onStatusFilter }) => {
         <FaSearch className="absolute top-3 left-3 text-gray-400" />
       </div>
 
-      <div className="flex gap-4 items-center">
-        <div className="relative">
+      <div className="flex flex-wrap gap-4 items-center w-full sm:w-auto">
+        <div className="relative w-full sm:w-auto">
           <DatePicker
             selected={filterStartDate}
             onChange={handleStartDateChange}
-            className="p-2 pl-8 pr-4 border rounded-md"
+            className="p-2 pl-8 pr-4 border rounded-md w-full"
             dateFormat="yyyy/MM/dd"
             placeholderText="Check In"
           />
           <FaCalendarAlt className="absolute top-3 left-3 text-gray-400" />
         </div>
 
-        <div className="relative">
+        <div className="relative w-full sm:w-auto">
           <DatePicker
             selected={filterEndDate}
             onChange={handleEndDateChange}
-            className="p-2 pl-8 pr-4 border rounded-md"
+            className="p-2 pl-8 pr-4 border rounded-md w-full"
             dateFormat="yyyy/MM/dd"
             placeholderText="Check Out"
             minDate={filterStartDate}
@@ -68,9 +68,9 @@ const CustomerFilter = ({ onSearch, onDateFilter, onStatusFilter }) => {
           <FaCalendarAlt className="absolute top-3 left-3 text-gray-400" />
         </div>
 
-        <div className="relative">
+        <div className="relative w-full sm:w-auto">
           <select
-            className="p-2 pl-8 pr-4 border rounded-md appearance-none"
+            className="p-2 pl-8 pr-4 border rounded-md w-full sm:w-auto"
             value={filterStatus}
             onChange={handleStatusChange}
           >

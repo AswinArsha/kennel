@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../supabase";
 import CustomerFilter from "./CustomerFilter";
-
 import { FaCheck, FaTimes } from "react-icons/fa"; // Font Awesome icons for check and cross
 
 const CustomerTable = ({
@@ -57,7 +56,7 @@ const CustomerTable = ({
 
   const handleDateFilter = (startDate, endDate, status) => {
     let filtered = customers;
-  
+
     if (startDate && endDate) {
       filtered = filtered.filter(
         (customer) =>
@@ -65,13 +64,14 @@ const CustomerTable = ({
           new Date(customer.end_date) <= endDate.setHours(23, 59, 59, 999) // Include end date
       );
     }
-  
+
     if (status) {
       filtered = filtered.filter((customer) => customer.status === status);
     }
-  
+
     setFilteredCustomers(filtered);
   };
+
   const handleStatusFilter = (startDate, endDate, status) => {
     handleDateFilter(startDate, endDate, status);
   };
@@ -81,14 +81,14 @@ const CustomerTable = ({
   }, []);
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-full mx-auto">
       <CustomerFilter
         onSearch={handleSearch}
         onDateFilter={handleDateFilter}
         onStatusFilter={handleStatusFilter}
       />
 
-      <div className="overflow-x-auto rounded-lg border border-gray-200 mt-4">
+      <div className="overflow-x-auto rounded-lg border border-gray-200">
         <table className="min-w-full divide-y-2 divide-gray-200 bg-white text-sm">
           <thead className="bg-gray-50">
             <tr>
@@ -145,11 +145,12 @@ const CustomerTable = ({
                 <td className="whitespace-nowrap px-4 py-2 text-gray-800">
                   <span
                     className={`rounded py-1 px-3 text-xs font-bold ${
-                      customer.status === "checkout"
-                     
+                      customer.status === "confirmed"
                         ? "bg-green-400"
                         : customer.status === "canceled"
                         ? "bg-red-400"
+                        : customer.status === "checkout"
+                        ? "bg-blue-400"
                         : "bg-yellow-400"
                     }`}
                   >

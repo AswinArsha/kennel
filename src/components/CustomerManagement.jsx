@@ -1,7 +1,6 @@
-import  { useState } from 'react';
-
-import CustomerTable from './CustomerTable'; // Customer table component
-import CustomerDetailDialog from './CustomerDetailDialog'; // Customer detail dialog
+import React, { useState } from "react";
+import CustomerTable from "./CustomerTable"; // Customer table component
+import CustomerDetailDialog from "./CustomerDetailDialog"; // Customer detail dialog
 
 const CustomerManagement = () => {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -13,11 +12,9 @@ const CustomerManagement = () => {
   };
 
   return (
-    <div className="flex h-screen">
-    
-      <div className="flex-1 p-4">
+    <div className="flex flex-col h-screen">
+      <div className="flex-1 p-4 overflow-auto">
         <CustomerTable onViewCustomer={handleViewCustomer} />
-        
         {/* Customer detail modal */}
         <CustomerDetailDialog
           customer={selectedCustomer}

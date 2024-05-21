@@ -29,7 +29,7 @@ const ReservationList = () => {
         reservation.kennel_numbers = kennelNumbers.join(", ");
       }
       setReservations(data);
-      setFilteredReservations(data);
+      setFilteredReservations(data.filter(reservation => reservation.status !== "canceled"));
     }
   };
 
@@ -115,18 +115,19 @@ const ReservationList = () => {
         reservations.filter(
           (reservation) =>
             new Date(reservation.start_date) >= startDate &&
-            new Date(reservation.end_date) <= endDate.setHours(23, 59, 59, 999)
+            new Date(reservation.end_date) <= endDate.setHours(23, 59, 59, 999) &&
+            reservation.status !== "canceled"
         )
       );
     } else {
-      setFilteredReservations(reservations);
+      setFilteredReservations(reservations.filter(reservation => reservation.status !== "canceled"));
     }
   };
 
   useEffect(() => {
     const filterReservations = () => {
       const filtered = reservations.filter(
-        (reservation) => reservation.status !== "checkout"
+        (reservation) => reservation.status !== "checkout" && reservation.status !== "canceled"
       );
       setFilteredReservations(filtered);
     };
@@ -152,7 +153,7 @@ const ReservationList = () => {
             );
           } else {
             const filtered = reservations.filter(
-              (reservation) => reservation.status !== "checkout"
+              (reservation) => reservation.status !== "checkout" && reservation.status !== "canceled"
             );
             setFilteredReservations(filtered);
           }

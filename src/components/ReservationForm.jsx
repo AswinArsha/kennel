@@ -329,11 +329,10 @@ const ReservationForm = () => {
             <legend className="text-lg font-medium text-gray-900">
               Services
             </legend>
-
-            <div className="mt-4 space-y-2">
+            <div className="mt-4 flex space-x-6 mb-3 ">
               <label
                 htmlFor="pickup"
-                className="flex cursor-pointer items-start gap-4"
+                className="flex cursor-pointer items-start gap-2"
               >
                 <div className="flex items-center">
                   <input
@@ -344,12 +343,12 @@ const ReservationForm = () => {
                     onChange={() => setPickup(!pickup)}
                   />
                 </div>
-                <div>Pickup</div>
+                <div className="-mt-1">Pickup</div>
               </label>
 
               <label
                 htmlFor="groom"
-                className="flex cursor-pointer items-start gap-4"
+                className="flex cursor-pointer items-start gap-2"
               >
                 <div className="flex items-center">
                   <input
@@ -360,12 +359,12 @@ const ReservationForm = () => {
                     onChange={() => setGroom(!groom)}
                   />
                 </div>
-                <div>Groom</div>
+                <div className="-mt-1">Groom</div>
               </label>
 
               <label
                 htmlFor="drop"
-                className="flex cursor-pointer items-start gap-4"
+                className="flex cursor-pointer items-start gap-2"
               >
                 <div className="flex items-center">
                   <input
@@ -376,7 +375,7 @@ const ReservationForm = () => {
                     onChange={() => setDrop(!drop)}
                   />
                 </div>
-                <div>Drop</div>
+                <div className="-mt-1">Drop</div>
               </label>
             </div>
           </fieldset>

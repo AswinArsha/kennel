@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "../supabase";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { FaFilter, FaCalendarAlt } from "react-icons/fa"; // Import FontAwesome icons
+import { FaFilter, FaCalendarAlt , FaDownload  } from "react-icons/fa"; // Import FontAwesome icons
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 
@@ -22,7 +22,7 @@ const FeedingLogHistory = () => {
     const { data, error } = await supabase
       .from("feeding_schedule")
       .select("*, kennels(kennel_number)")
-      .order("kennel_id", { ascending: true }); // Order by kennel_id
+      .order("kennel_id", { ascending: true });
 
     if (error) {
       console.error("Error fetching feeding history:", error.message);
@@ -135,110 +135,103 @@ const FeedingLogHistory = () => {
   }, []);
 
   return (
-    <div className="container mx-auto p-4">
-      <h2 className="text-3xl font-semibold mb-6 text-gray-800">
-        Feeding Log History
-      </h2>
+    <div className="container  mx-auto p-4">
+      <h1 className="text-3xl font-bold text-gray-800 mb-6">Feeding Log History</h1>
 
-      <div className=" top-0 bg-white pb-4">
-        <div className="flex gap-4 mb-4">
-          <div className="relative">
-            <DatePicker
-              selected={filterDate}
-              onChange={(date) => setFilterDate(date)}
-              className="w-full p-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              dateFormat="yyyy/MM/dd"
-              placeholderText="Filter by date"
-              popperPlacement="bottom-start"
-            />
-            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-              <FaCalendarAlt className="h-5 w-5 text-gray-400" />
-            </div>
-          </div>
-
-          <div className="relative">
-            <input
-              type="text"
-              className="w-full p-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              placeholder="Kennel Number"
-              value={filterKennelNumber}
-              onChange={(e) => setFilterKennelNumber(e.target.value)}
-            />
-            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-              <FaFilter className="h-5 w-5 text-gray-400" />
-            </div>
-          </div>
-
-          <button
-            className="bg-red-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-red-600 transition-colors duration-300"
-            onClick={clearFilters}
-          >
-            Clear Filters
-          </button>
-
-          <button
-            className="bg-indigo-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-indigo-600 transition-colors duration-300"
-            onClick={downloadPDF}
-          >
-            Download PDF
-          </button>
-        </div>
+      <div >
+      <div className="flex flex-col md:flex-row mb-5 gap-4 items-start">
+      <div className="relative flex items-center w-full md:w-64">
+        <DatePicker
+          selected={filterDate}
+          onChange={(date) => setFilterDate(date)}
+          dateFormat="yyyy/MM/dd"
+          placeholderText="Filter by date"
+          className="p-3 pl-10 pr-4 border rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+          popperPlacement="bottom-start"
+        />
+        <FaCalendarAlt className="absolute top-1/2 left-3 transform -translate-y-1/2 text-gray-400" />
       </div>
+
+      <div className="relative flex items-center w-full md:w-48">
+        <input
+          type="text"
+          placeholder="Kennel Number"
+          value={filterKennelNumber}
+          onChange={(e) => setFilterKennelNumber(e.target.value)}
+          className="p-3 pl-10 pr-4 border rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <FaFilter className="absolute top-1/2 left-3 transform -translate-y-1/2 text-gray-400" />
+      </div>
+
+      <button
+        onClick={clearFilters}
+        className="bg-gray-200 mt-0 lg:mt-2 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
+        Clear Filters
+      </button>
+
+      <button
+        onClick={downloadPDF}
+        className="bg-blue-500 mt-0 lg:mt-2 hover:bg-blue-600 text-white flex items-center px-4 py-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
+        <FaDownload className="mr-2" />
+        Download PDF
+      </button>
+    </div>
+
+    </div>
 
       <div className="overflow-x-auto rounded-lg border border-gray-200">
         <table className="min-w-full divide-y-2 divide-gray-200 bg-white text-sm">
-          <thead className="bg-gray-100">
+          <thead className="bg-gray-50">
             <tr>
-              <th className="whitespace-nowrap px-4 py-2 font-semibold text-gray-900">
+              <th  className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
                 Kennel Number
               </th>
-              <th className="whitespace-nowrap px-4 py-2 font-semibold text-gray-900">
+              <th  className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
                 Feeding Date
               </th>
-              <th className="whitespace-nowrap px-4 py-2 font-semibold text-gray-900">
+              <th  className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
                 Fed (Morning)
               </th>
-              <th className="whitespace-nowrap px-4 py-2 font-semibold text-gray-900">
+              <th  className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
                 Fed (Noon)
               </th>
             </tr>
           </thead>
-
           <tbody className="divide-y divide-gray-200">
             {applyFilters().map((entry, index) => (
               <tr
                 key={index}
-                className={`${
-                  index % 2 === 0 ? "bg-gray-50" : "bg-white"
-                } hover:bg-gray-100 transition-colors duration-300`}
+               className="bg-white hover:bg-gray-100"
               >
-                <td className="whitespace-nowrap text-center px-4 py-2 font-medium text-gray-900">
+                <td className="px-6 text-center whitespace-nowrap text-sm font-medium text-gray-900">
                   {entry.kennel_number}
                 </td>
-                <td className="whitespace-nowrap px-4 text-center py-2 text-gray-700">
+                <td className="whitespace-nowrap text-center px-4  text-gray-700">
                   {formatDate(new Date(entry.feeding_date))}
                 </td>
-                <td className="whitespace-nowrap text-center px-4 py-2 text-gray-700">
-                  {entry.morning_fed ? (
-                    <span className="bg-green-500 text-white p-1 rounded">
-                      Yes
-                    </span>
-                  ) : (
-                    <span className="bg-red-500 text-white p-1 rounded">
-                      No
-                    </span>
-                  )}
+                <td className="px-2 text-center  whitespace-nowrap">
+                  <span
+                    className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      entry.morning_fed
+                        ? "bg-green-500 text-white p-1 rounded-lg"
+                        : "bg-red-500 text-white p-1 rounded-lg"
+                    }`}
+                  >
+                    {entry.morning_fed ? "Yes" : "No"}
+                  </span>
                 </td>
-                <td className="whitespace-nowrap text-center px-4 py-2 text-gray-700">
-                  {entry.noon_fed ? (
-                    <span className="bg-green-500 text-white p-1 rounded">
-                      Yes
-                    </span>
-                  ) : (
-                    <span className="bg-red-500 text-white p-1 rounded">
-                      No
-                    </span>
-                  )}
+                <td className="px-6 text-center py-1 whitespace-nowrap">
+                  <span
+                    className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      entry.noon_fed
+                        ? "bg-green-500 text-white p-1 rounded-lg"
+                        : "bg-red-500 text-white p-1 rounded-lg"
+                    }`}
+                  >
+                    {entry.noon_fed ? "Yes" : "No"}
+                  </span>
                 </td>
               </tr>
             ))}
