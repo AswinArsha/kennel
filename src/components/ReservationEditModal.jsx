@@ -36,34 +36,46 @@ const ReservationEditModal = ({
         const { data: reservationData, error: reservationError } =
           await supabase
             .from("reservations")
-            .select("*")
+            .select(
+              `
+            *,
+            customers:customer_id (
+              customer_name,
+              customer_phone,
+              customer_address
+            )
+          `
+            )
             .eq("id", selectedReservation.id)
             .single();
-  
+
         if (!reservationError && reservationData) {
-          setReservationInfo(reservationData);
+          setReservationInfo({
+            ...reservationData,
+            customer_name: reservationData.customers.customer_name,
+            customer_phone: reservationData.customers.customer_phone,
+            customer_address: reservationData.customers.customer_address,
+          });
         } else {
           console.error("Error fetching reservation info:", reservationError);
         }
-  
+
         const { data: petData, error: petError } = await supabase
           .from("pet_information")
           .select("*")
           .eq("reservation_id", selectedReservation.id)
           .single();
-  
+
         if (!petError && petData) {
           setPetInfo(petData);
         } else {
-          // Check if there is no existing pet information entry
           const { error: noDataError } = await supabase
             .from("pet_information")
             .select("*")
             .eq("reservation_id", selectedReservation.id)
             .single();
-  
+
           if (noDataError && noDataError.code === "PGRST116") {
-            // If there is no existing entry, set default values for pet information
             setPetInfo({
               dietary_requirements: "",
               special_care_instructions: "",
@@ -75,18 +87,24 @@ const ReservationEditModal = ({
         }
       }
     };
-  
+
     fetchInfo();
   }, [selectedReservation]);
 
   const saveInformation = async () => {
     if (selectedReservation) {
-      const { error: reservationError } = await supabase
-        .from("reservations")
+      const { error: customerError } = await supabase
+        .from("customers")
         .update({
           customer_name: reservationInfo.customer_name,
           customer_phone: reservationInfo.customer_phone,
           customer_address: reservationInfo.customer_address,
+        })
+        .eq("id", reservationInfo.customer_id);
+
+      const { error: reservationError } = await supabase
+        .from("reservations")
+        .update({
           pet_name: reservationInfo.pet_name,
           pet_breed: reservationInfo.pet_breed,
           start_date: reservationInfo.start_date,
@@ -112,24 +130,27 @@ const ReservationEditModal = ({
 
         petError = error;
       } else {
-        const { error } = await supabase
-          .from("pet_information")
-          .insert({
-            kennel_id: selectedReservation.kennel_ids[0],
-            reservation_id: selectedReservation.id,
-            dietary_requirements: petInfo.dietary_requirements,
-            special_care_instructions: petInfo.special_care_instructions,
-            medical_notes: petInfo.medical_notes,
-          });
+        const { error } = await supabase.from("pet_information").insert({
+          kennel_id: selectedReservation.kennel_ids[0],
+          reservation_id: selectedReservation.id,
+          dietary_requirements: petInfo.dietary_requirements,
+          special_care_instructions: petInfo.special_care_instructions,
+          medical_notes: petInfo.medical_notes,
+        });
 
         petError = error;
       }
 
-      if (!reservationError && !petError) {
+      if (!customerError && !reservationError && !petError) {
         onClose();
         onSave();
       } else {
-        console.error("Error saving information:", reservationError, petError);
+        console.error(
+          "Error saving information:",
+          customerError,
+          reservationError,
+          petError
+        );
       }
     }
   };
@@ -285,9 +306,7 @@ const ReservationEditModal = ({
               />
             </div>
             <div className="mt-4">
-              <label className="block font-semibold">
-                Pickup
-              </label>
+              <label className="block font-semibold">Pickup</label>
               <input
                 type="checkbox"
                 checked={reservationInfo.pickup}
@@ -300,9 +319,7 @@ const ReservationEditModal = ({
               />
             </div>
             <div className="mt-4">
-              <label className="block font-semibold">
-                Drop
-              </label>
+              <label className="block font-semibold">Drop</label>
               <input
                 type="checkbox"
                 checked={reservationInfo.drop}
@@ -315,15 +332,14 @@ const ReservationEditModal = ({
               />
             </div>
             <div className="mt-4">
-              <label className="block font-semibold">
-                Groom
-              </label>
+              <label className="block font-semibold">Groom</label>
               <input
                 type="checkbox"
                 checked={reservationInfo.groom}
                 onChange={(e) =>
                   setReservationInfo({
-                    ...reservationInfo,                groom: e.target.checked,
+                    ...reservationInfo,
+                    groom: e.target.checked,
                   })
                 }
               />

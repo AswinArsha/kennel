@@ -59,18 +59,20 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
               dietary_requirements,
               special_care_instructions,
               medical_notes
+            ),
+            customers:customer_id (
+              customer_name,
+              customer_phone,
+              customer_address
             )
           `)
           .eq("kennel_ids", `{${customer.id}}`) // Filter by kennel ID
           .single();
-  
+    
         if (reservationError) {
           console.error("Error fetching reservation details:", reservationError.message);
         } else {
           const {
-            customer_name,
-            customer_phone,
-            customer_address,
             pet_name,
             pet_breed,
             start_date,
@@ -79,12 +81,13 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
             groom,
             drop,
             pet_information,
+            customers,
           } = reservation;
-  
+    
           setCustomerDetail({
-            customer_name,
-            customer_phone,
-            customer_address,
+            customer_name: customers.customer_name,
+            customer_phone: customers.customer_phone,
+            customer_address: customers.customer_address,
             pets: [
               {
                 pet_name,
@@ -321,7 +324,7 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
   </div>
 </TabPanel>
 
-          <TabPanel>
+<TabPanel>
   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
     <div>
       <div className="mb-6">
@@ -351,7 +354,6 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
     </div>
   </div>
 </TabPanel>
-
           <TabPanel>
             <div className="mt-4">
               <div className="flex items-center mb-4">

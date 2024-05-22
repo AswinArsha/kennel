@@ -1,6 +1,7 @@
 import React from "react";
 import { FaCheck, FaTimes } from "react-icons/fa";
 import BillGenerationModal from "./BillGenerationModal";
+import { supabase } from "../supabase";
 
 const ReservationTable = ({
   reservations,
@@ -13,9 +14,48 @@ const ReservationTable = ({
   selectedReservation,
   setSelectedReservation,
 }) => {
-  const handleCheckout = (reservation) => {
+  const handleCheckout = async (reservation) => {
     setSelectedReservation(reservation);
     setIsCheckoutModalOpen(true);
+
+    // Perform deletion of feeding information upon checkout
+    try {
+      await deleteFeedingInformation(reservation);
+    } catch (error) {
+      console.error("Error deleting feeding information:", error.message);
+      // Handle error gracefully (e.g., show error message)
+    }
+
+    // Refresh reservations after checkout
+    await fetchReservations();
+  };
+
+  const deleteFeedingInformation = async (reservation) => {
+    if (!reservation.kennel_ids || reservation.kennel_ids.length === 0) {
+      return;
+    }
+
+    // Identify kennel_ids associated with the reservation
+    const kennelIds = reservation.kennel_ids;
+
+    // Construct queries to delete feeding_schedule entries for each kennel_id
+    for (const kennelId of kennelIds) {
+      const { error } = await supabase
+        .from("feeding_schedule")
+        .delete()
+        .eq("kennel_id", kennelId);
+
+      if (error) {
+        throw new Error(
+          `Failed to delete feeding information for kennel_id ${kennelId}`
+        );
+      }
+    }
+  };
+
+  const fetchReservations = async () => {
+    // Implement your fetchReservations function as previously defined
+    // This function should update the state of reservations
   };
 
   return (
@@ -59,7 +99,7 @@ const ReservationTable = ({
           {reservations.map((reservation) => (
             <tr key={reservation.id} className="bg-white hover:bg-gray-100">
               <td className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
-                {reservation.customer_name}
+                {reservation.customers.customer_name}
               </td>
               <td className="whitespace-nowrap px-4 py-2 text-gray-700">
                 {new Date(reservation.created_at).toDateString()}
@@ -119,12 +159,13 @@ const ReservationTable = ({
                   </button>
                 )}
                 {reservation.status === "pending" && onCancel && (
-                  <button
-                    className="bg-red-500 text-white py-1 px-2 rounded-md hover:bg-red-600 ml-2"
-                    onClick={() => onCancel(reservation)}
-                  >
-                    Cancel
-                  </button>
+                 <button
+                 className="bg-red-500 text-white py-1 px-2 rounded-md hover:bg-red-600 ml-2"
+                 onClick={() => onCancel && onCancel(reservation)} // Ensure onCancel is passed down correctly
+               >
+                 Cancel
+               </button>
+               
                 )}
                 {reservation.status === "confirmed" && (
                   <>

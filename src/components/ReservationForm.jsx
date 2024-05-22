@@ -52,7 +52,7 @@ const ReservationForm = () => {
             isValid = false;
           }
         } else {
-          const value = eval(field); // Use eval to access the corresponding state variable
+          const value = eval(field);
           if (!value) {
             errors[field] = rule.message;
             isValid = false;
@@ -65,12 +65,46 @@ const ReservationForm = () => {
     return isValid;
   };
 
+  const fetchCustomerDetails = async (phone) => {
+    const { data, error } = await supabase
+      .from("customers")
+      .select("customer_name, customer_address")
+      .eq("customer_phone", phone)
+      .single();
+
+    if (error) {
+      console.error("Error fetching customer details:", error.message);
+      return null;
+    }
+
+    return data;
+  };
+
+  const handleCustomerPhoneChange = async (e) => {
+    const phone = e.target.value;
+    setCustomerPhone(phone);
+
+    if (phone.trim() !== "") {
+      const customerData = await fetchCustomerDetails(phone);
+      if (customerData) {
+        setCustomerName(customerData.customer_name);
+        setCustomerAddress(customerData.customer_address);
+      } else {
+        setCustomerName("");
+        setCustomerAddress("");
+      }
+    } else {
+      setCustomerName("");
+      setCustomerAddress("");
+    }
+  };
+
   const fetchAvailableKennels = async () => {
     const { data, error } = await supabase
       .from("kennels")
       .select("*")
       .eq("status", "available")
-      .neq("set_name", "Maintenance"); // Exclude kennels with set_name 'Maintenance'
+      .neq("set_name", "Maintenance");
 
     if (error) {
       console.error("Error fetching kennels:", error.message);
@@ -81,10 +115,49 @@ const ReservationForm = () => {
 
   const createReservation = async () => {
     if (validateForm()) {
-      const { error } = await supabase.from("reservations").insert({
-        customer_name: customerName,
-        customer_phone: customerPhone,
-        customer_address: customerAddress,
+      let customerData;
+      let customerError;
+  
+      // Check if customer already exists
+      const { data: existingCustomer, error: fetchCustomerError } = await supabase
+        .from("customers")
+        .select("*")
+        .eq("customer_phone", customerPhone)
+        .single();
+  
+      if (fetchCustomerError) {
+        console.error("Error fetching customer:", fetchCustomerError.message);
+        return;
+      }
+  
+      if (existingCustomer) {
+        // Customer exists, use existing customer data
+        customerData = existingCustomer;
+      } else {
+        // Customer doesn't exist, create a new one
+        const { data: newCustomer, error: newCustomerError } = await supabase
+          .from("customers")
+          .insert([
+            {
+              customer_name: customerName,
+              customer_phone: customerPhone,
+              customer_address: customerAddress,
+            },
+          ])
+          .select()
+          .single();
+  
+        customerData = newCustomer;
+        customerError = newCustomerError;
+      }
+  
+      if (customerError) {
+        console.error("Error creating customer:", customerError.message);
+        return;
+      }
+  
+      const { error: reservationError } = await supabase.from("reservations").insert({
+        customer_id: customerData.id,
         pet_name: petName,
         pet_breed: petBreed,
         start_date: startDate,
@@ -95,9 +168,9 @@ const ReservationForm = () => {
         groom,
         drop,
       });
-
-      if (error) {
-        console.error("Error creating reservation:", error.message);
+  
+      if (reservationError) {
+        console.error("Error creating reservation:", reservationError.message);
       } else {
         await Promise.all(
           selectedKennels.map(async (kennel) => {
@@ -111,6 +184,7 @@ const ReservationForm = () => {
       }
     }
   };
+  
 
   useEffect(() => {
     if (startDate) {
@@ -167,7 +241,7 @@ const ReservationForm = () => {
               errors.customerPhone ? "border-red-500" : ""
             }`}
             value={customerPhone}
-            onChange={(e) => setCustomerPhone(e.target.value)}
+            onChange={handleCustomerPhoneChange} // Updated to use handleCustomerPhoneChange
           />
           {errors.customerPhone && (
             <p className="text-red-500 text-sm">{errors.customerPhone}</p>
