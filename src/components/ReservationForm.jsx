@@ -19,6 +19,8 @@ const ReservationForm = () => {
   const [drop, setDrop] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [errors, setErrors] = useState({});
+  const [breedOptions, setBreedOptions] = useState([]);
+  const [breedLoading, setBreedLoading] = useState(false);
 
   const validationRules = {
     customerName: { required: true, message: "Please enter the customer name" },
@@ -83,21 +85,26 @@ const ReservationForm = () => {
   const handleCustomerPhoneChange = async (e) => {
     const phone = e.target.value;
     setCustomerPhone(phone);
-
+  
     if (phone.trim() !== "") {
       const customerData = await fetchCustomerDetails(phone);
       if (customerData) {
         setCustomerName(customerData.customer_name);
         setCustomerAddress(customerData.customer_address);
       } else {
-        setCustomerName("");
-        setCustomerAddress("");
+        // Check if the customer name and address are already filled by user
+        // and preserve them if customerData is null (customer doesn't exist)
+        if (!customerName.trim() && !customerAddress.trim()) {
+          setCustomerName("");
+          setCustomerAddress("");
+        }
       }
     } else {
       setCustomerName("");
       setCustomerAddress("");
     }
   };
+  
 
   const fetchAvailableKennels = async () => {
     const { data, error } = await supabase
@@ -117,22 +124,24 @@ const ReservationForm = () => {
     if (validateForm()) {
       let customerData;
       let customerError;
-  
+
       // Check if customer already exists
-      const { data: existingCustomer, error: fetchCustomerError } = await supabase
-        .from("customers")
-        .select("*")
-        .eq("customer_phone", customerPhone)
-        .single();
-  
+      const { data: existingCustomers, error: fetchCustomerError } =
+        await supabase
+          .from("customers")
+          .select("*")
+          .eq("customer_phone", customerPhone);
+
       if (fetchCustomerError) {
         console.error("Error fetching customer:", fetchCustomerError.message);
         return;
       }
-  
-      if (existingCustomer) {
+
+      
+
+      if (existingCustomers.length > 0) {
         // Customer exists, use existing customer data
-        customerData = existingCustomer;
+        customerData = existingCustomers[0];
       } else {
         // Customer doesn't exist, create a new one
         const { data: newCustomer, error: newCustomerError } = await supabase
@@ -144,31 +153,31 @@ const ReservationForm = () => {
               customer_address: customerAddress,
             },
           ])
-          .select()
-          .single();
-  
-        customerData = newCustomer;
-        customerError = newCustomerError;
+          .select();
+
+        if (newCustomerError) {
+          console.error("Error creating customer:", newCustomerError.message);
+          return;
+        }
+
+        customerData = newCustomer[0];
       }
-  
-      if (customerError) {
-        console.error("Error creating customer:", customerError.message);
-        return;
-      }
-  
-      const { error: reservationError } = await supabase.from("reservations").insert({
-        customer_id: customerData.id,
-        pet_name: petName,
-        pet_breed: petBreed,
-        start_date: startDate,
-        end_date: endDate,
-        status: "pending",
-        kennel_ids: selectedKennels.map((k) => k.id),
-        pickup,
-        groom,
-        drop,
-      });
-  
+
+      const { error: reservationError } = await supabase
+        .from("reservations")
+        .insert({
+          customer_id: customerData.id,
+          pet_name: petName,
+          pet_breed: petBreed,
+          start_date: startDate,
+          end_date: endDate,
+          status: "pending",
+          kennel_ids: selectedKennels.map((k) => k.id),
+          pickup,
+          groom,
+          drop,
+        });
+
       if (reservationError) {
         console.error("Error creating reservation:", reservationError.message);
       } else {
@@ -184,13 +193,38 @@ const ReservationForm = () => {
       }
     }
   };
-  
 
   useEffect(() => {
     if (startDate) {
       fetchAvailableKennels();
     }
   }, [startDate]);
+
+  useEffect(() => {
+    const fetchBreedOptions = async () => {
+      if (petBreed.trim() !== "") {
+        setBreedLoading(true);
+        try {
+          const response = await fetch(
+            `https://api.thedogapi.com/v1/breeds/search?q=${petBreed}`
+          );
+          if (!response.ok) {
+            throw new Error("Failed to fetch breed options");
+          }
+          const data = await response.json();
+          setBreedOptions(data.map((breed) => breed.name));
+        } catch (error) {
+          console.error("Error fetching breed options:", error);
+        } finally {
+          setBreedLoading(false);
+        }
+      } else {
+        setBreedOptions([]);
+      }
+    };
+
+    fetchBreedOptions();
+  }, [petBreed]);
 
   const clearForm = () => {
     setCustomerName("");
@@ -205,6 +239,7 @@ const ReservationForm = () => {
     setGroom(false);
     setDrop(false);
     setErrors({});
+    setBreedOptions([]);
   };
 
   return (
@@ -212,6 +247,9 @@ const ReservationForm = () => {
       <h2 className="text-2xl font-bold mb-6">Create Reservation</h2>
 
       <div className="space-y-4">
+
+     
+
         <div>
           <label htmlFor="customerName" className="block text-sm font-medium">
             Customer Name
@@ -268,7 +306,6 @@ const ReservationForm = () => {
             <p className="text-red-500 text-sm">{errors.customerAddress}</p>
           )}
         </div>
-
         <div>
           <label htmlFor="petName" className="block text-sm font-medium">
             Pet Name
@@ -300,6 +337,22 @@ const ReservationForm = () => {
             value={petBreed}
             onChange={(e) => setPetBreed(e.target.value)}
           />
+          {breedOptions.length > 0 && (
+            <ul className="mt-1 border rounded-md border-gray-300 bg-white">
+              {breedOptions.map((breed, index) => (
+                <li
+                  key={index}
+                  className="px-3 py-2 cursor-pointer hover:bg-gray-100"
+                  onClick={() => setPetBreed(breed)}
+                >
+                  {breed}
+                </li>
+              ))}
+            </ul>
+          )}
+          {breedLoading && (
+            <p className="mt-1 text-sm text-gray-500">Loading...</p>
+          )}
           {errors.petBreed && (
             <p className="text-red-500 text-sm">{errors.petBreed}</p>
           )}
