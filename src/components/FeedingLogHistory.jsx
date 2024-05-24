@@ -181,63 +181,63 @@ const FeedingLogHistory = () => {
 
     </div>
 
-      <div className="overflow-x-auto rounded-lg border border-gray-200">
-        <table className="min-w-full divide-y-2 divide-gray-200 bg-white text-sm">
-          <thead className="bg-gray-50">
-            <tr>
-              <th  className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
-                Kennel Number
-              </th>
-              <th  className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
-                Feeding Date
-              </th>
-              <th  className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
-                Fed (Morning)
-              </th>
-              <th  className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
-                Fed (Noon)
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {applyFilters().map((entry, index) => (
-              <tr
-                key={index}
-               className="bg-white hover:bg-gray-100"
+    <div className="overflow-x-auto rounded-lg border border-gray-200 ">
+  <div className="max-h-[470px] overflow-y-auto">
+    <table className="min-w-full divide-y-2 divide-gray-200 bg-white text-sm">
+      <thead className="bg-gray-50 sticky top-0 z-10">
+        <tr>
+          <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
+            Feeding Date
+          </th>
+          <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
+            Kennel Number
+          </th>
+          <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
+            Fed (Morning)
+          </th>
+          <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
+            Fed (Noon)
+          </th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-gray-200">
+        {applyFilters().map((entry, index) => (
+          <tr key={index} className="bg-white hover:bg-gray-100">
+            <td className="whitespace-nowrap text-center px-4 text-gray-900">
+              {formatDate(new Date(entry.feeding_date))}
+            </td>
+            <td className="px-6 text-center whitespace-nowrap text-sm font-medium text-gray-700">
+              {entry.kennel_number}
+            </td>
+            <td className="px-2 text-center whitespace-nowrap">
+              <span
+                className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                  entry.morning_fed
+                    ? "bg-green-500 text-white p-1 rounded-lg"
+                    : "bg-red-500 text-white p-1 rounded-lg"
+                }`}
               >
-                <td className="px-6 text-center whitespace-nowrap text-sm font-medium text-gray-900">
-                  {entry.kennel_number}
-                </td>
-                <td className="whitespace-nowrap text-center px-4  text-gray-700">
-                  {formatDate(new Date(entry.feeding_date))}
-                </td>
-                <td className="px-2 text-center  whitespace-nowrap">
-                  <span
-                    className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      entry.morning_fed
-                        ? "bg-green-500 text-white p-1 rounded-lg"
-                        : "bg-red-500 text-white p-1 rounded-lg"
-                    }`}
-                  >
-                    {entry.morning_fed ? "Yes" : "No"}
-                  </span>
-                </td>
-                <td className="px-6 text-center py-1 whitespace-nowrap">
-                  <span
-                    className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      entry.noon_fed
-                        ? "bg-green-500 text-white p-1 rounded-lg"
-                        : "bg-red-500 text-white p-1 rounded-lg"
-                    }`}
-                  >
-                    {entry.noon_fed ? "Yes" : "No"}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                {entry.morning_fed ? "Yes" : "No"}
+              </span>
+            </td>
+            <td className="px-6 text-center py-1 whitespace-nowrap">
+              <span
+                className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                  entry.noon_fed
+                    ? "bg-green-500 text-white p-1 rounded-lg"
+                    : "bg-red-500 text-white p-1 rounded-lg"
+                }`}
+              >
+                {entry.noon_fed ? "Yes" : "No"}
+              </span>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</div>
+
     </div>
   );
 };

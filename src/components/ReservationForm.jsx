@@ -3,6 +3,7 @@ import PropTypes from "prop-types";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { supabase } from "../supabase";
+import { FaCheck, FaTimes, FaCalendarAlt, FaDog } from "react-icons/fa";
 
 const ReservationForm = () => {
   const [customerName, setCustomerName] = useState("");
@@ -92,8 +93,6 @@ const ReservationForm = () => {
         setCustomerName(customerData.customer_name);
         setCustomerAddress(customerData.customer_address);
       } else {
-        // Check if the customer name and address are already filled by user
-        // and preserve them if customerData is null (customer doesn't exist)
         if (!customerName.trim() && !customerAddress.trim()) {
           setCustomerName("");
           setCustomerAddress("");
@@ -104,7 +103,6 @@ const ReservationForm = () => {
       setCustomerAddress("");
     }
   };
-  
 
   const fetchAvailableKennels = async () => {
     const { data, error } = await supabase
@@ -125,7 +123,6 @@ const ReservationForm = () => {
       let customerData;
       let customerError;
 
-      // Check if customer already exists
       const { data: existingCustomers, error: fetchCustomerError } =
         await supabase
           .from("customers")
@@ -137,13 +134,9 @@ const ReservationForm = () => {
         return;
       }
 
-      
-
       if (existingCustomers.length > 0) {
-        // Customer exists, use existing customer data
         customerData = existingCustomers[0];
       } else {
-        // Customer doesn't exist, create a new one
         const { data: newCustomer, error: newCustomerError } = await supabase
           .from("customers")
           .insert([
@@ -242,169 +235,241 @@ const ReservationForm = () => {
     setBreedOptions([]);
   };
 
+
   return (
-    <div className="max-w-xl mx-auto p-6 bg-white rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold mb-6">Create Reservation</h2>
-
-      <div className="space-y-4">
-
-     
-
+    <div className="max-w-screen-xl mx-auto p-6 bg-white rounded-lg shadow-md">
+      <h2 className="text-2xl font-bold mb-6 text-center">Create Reservation</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div>
-          <label htmlFor="customerName" className="block text-sm font-medium">
-            Customer Name
-          </label>
-          <input
-            type="text"
-            id="customerName"
-            className={`w-full p-2 border rounded-md focus:border-blue-500 ${
-              errors.customerName ? "border-red-500" : ""
-            }`}
-            value={customerName}
-            onChange={(e) => setCustomerName(e.target.value)}
-          />
-          {errors.customerName && (
-            <p className="text-red-500 text-sm">{errors.customerName}</p>
-          )}
+          <div className="mb-4">
+            <label
+              htmlFor="customerName"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Customer Name
+            </label>
+            <input
+              type="text"
+              id="customerName"
+              className={`w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                errors.customerName ? "border-red-500" : "border-gray-300"
+              }`}
+              value={customerName}
+              onChange={(e) => setCustomerName(e.target.value)}
+            />
+            {errors.customerName && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.customerName}
+              </p>
+            )}
+          </div>
+
+          <div className="mb-4">
+            <label
+              htmlFor="customerPhone"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Customer Phone
+            </label>
+            <input
+              type="text"
+              id="customerPhone"
+              className={`w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                errors.customerPhone ? "border-red-500" : "border-gray-300"
+              }`}
+              value={customerPhone}
+              onChange={handleCustomerPhoneChange}
+            />
+            {errors.customerPhone && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.customerPhone}
+              </p>
+            )}
+          </div>
+
+          <div className="mb-4">
+            <label
+              htmlFor="customerAddress"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Customer Address
+            </label>
+            <input
+              type="text"
+              id="customerAddress"
+              className={`w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                errors.customerAddress ? "border-red-500" : "border-gray-300"
+              }`}
+              value={customerAddress}
+              onChange={(e) => setCustomerAddress(e.target.value)}
+            />
+            {errors.customerAddress && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.customerAddress}
+              </p>
+            )}
+          </div>
+
+          <div className="mb-4">
+  <label htmlFor="petName" className="block text-sm font-medium text-gray-700">
+    Pet Name
+  </label>
+  <input
+    type="text"
+    id="petName"
+    className={`w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+      errors.petName ? "border-red-500" : "border-gray-300"
+    }`}
+    value={petName}
+    onChange={(e) => setPetName(e.target.value)}
+  />
+  {errors.petName && (
+    <p className="text-red-500 text-sm mt-1">{errors.petName}</p>
+  )}
+</div>
+
+<div className="mb-4">
+  <label htmlFor="petBreed" className="block text-sm font-medium text-gray-700">
+    Pet Breed
+  </label>
+  <input
+    type="text"
+    id="petBreed"
+    className={`w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+      errors.petBreed ? "border-red-500" : "border-gray-300"
+    }`}
+    value={petBreed}
+    onChange={(e) => setPetBreed(e.target.value)}
+  />
+  {breedOptions.length > 0 && (
+    <ul className="mt-1 border rounded-md border-gray-300 bg-white">
+      {breedOptions.map((breed, index) => (
+        <li
+          key={index}
+          className="px-3 py-2 cursor-pointer hover:bg-gray-100"
+          onClick={() => setPetBreed(breed)}
+        >
+          {breed}
+        </li>
+      ))}
+    </ul>
+  )}
+  {breedLoading && (
+    <p className="mt-1 text-sm text-gray-500">Loading...</p>
+  )}
+  {errors.petBreed && (
+    <p className="text-red-500 text-sm mt-1">{errors.petBreed}</p>
+  )}
+</div>
+          <div className="mb-4">
+            <legend className="text-lg font-medium text-gray-900 mb-2">
+              Services
+            </legend>
+            <div className="flex space-x-6">
+              <label
+                htmlFor="pickup"
+                className="flex cursor-pointer items-center gap-2"
+              >
+                <input
+                  type="checkbox"
+                  id="pickup"
+                  className="form-checkbox h-5 w-5 text-blue-500"
+                  checked={pickup}
+                  onChange={() => setPickup(!pickup)}
+                />
+                <span className="text-sm text-gray-700">Pickup</span>
+              </label>
+
+              <label
+                htmlFor="groom"
+                className="flex cursor-pointer items-center gap-2"
+              >
+                <input
+                  type="checkbox"
+                  id="groom"
+                  className="form-checkbox h-5 w-5 text-blue-500"
+                  checked={groom}
+                  onChange={() => setGroom(!groom)}
+                />
+                <span className="text-sm text-gray-700">Groom</span>
+              </label>
+
+              <label
+                htmlFor="drop"
+                className="flex cursor-pointer items-center gap-2"
+              >
+                <input
+                  type="checkbox"
+                  id="drop"
+                  className="form-checkbox h-5 w-5 text-blue-500"
+                  checked={drop}
+                  onChange={() => setDrop(!drop)}
+                />
+                <span className="text-sm text-gray-700">Drop</span>
+              </label>
+            </div>
+          </div>
         </div>
 
         <div>
-          <label htmlFor="customerPhone" className="block text-sm font-medium">
-            Customer Phone
-          </label>
-          <input
-            type="text"
-            id="customerPhone"
-            className={`w-full p-2 border rounded-md focus:border-blue-500 ${
-              errors.customerPhone ? "border-red-500" : ""
-            }`}
-            value={customerPhone}
-            onChange={handleCustomerPhoneChange} // Updated to use handleCustomerPhoneChange
-          />
-          {errors.customerPhone && (
-            <p className="text-red-500 text-sm">{errors.customerPhone}</p>
-          )}
-        </div>
-
-        <div>
-          <label
-            htmlFor="customerAddress"
-            className="block text-sm font-medium"
-          >
-            Customer Address
-          </label>
-          <input
-            type="text"
-            id="customerAddress"
-            className={`w-full p-2 border rounded-md focus:border-blue-500 ${
-              errors.customerAddress ? "border-red-500" : ""
-            }`}
-            value={customerAddress}
-            onChange={(e) => setCustomerAddress(e.target.value)}
-          />
-          {errors.customerAddress && (
-            <p className="text-red-500 text-sm">{errors.customerAddress}</p>
-          )}
-        </div>
-        <div>
-          <label htmlFor="petName" className="block text-sm font-medium">
-            Pet Name
-          </label>
-          <input
-            type="text"
-            id="petName"
-            className={`w-full p-2 border rounded-md focus:border-blue-500 ${
-              errors.petName ? "border-red-500" : ""
-            }`}
-            value={petName}
-            onChange={(e) => setPetName(e.target.value)}
-          />
-          {errors.petName && (
-            <p className="text-red-500 text-sm">{errors.petName}</p>
-          )}
-        </div>
-
-        <div>
-          <label htmlFor="petBreed" className="block text-sm font-medium">
-            Pet Breed
-          </label>
-          <input
-            type="text"
-            id="petBreed"
-            className={`w-full p-2 border rounded-md focus:border-blue-500 ${
-              errors.petBreed ? "border-red-500" : ""
-            }`}
-            value={petBreed}
-            onChange={(e) => setPetBreed(e.target.value)}
-          />
-          {breedOptions.length > 0 && (
-            <ul className="mt-1 border rounded-md border-gray-300 bg-white">
-              {breedOptions.map((breed, index) => (
-                <li
-                  key={index}
-                  className="px-3 py-2 cursor-pointer hover:bg-gray-100"
-                  onClick={() => setPetBreed(breed)}
-                >
-                  {breed}
-                </li>
-              ))}
-            </ul>
-          )}
-          {breedLoading && (
-            <p className="mt-1 text-sm text-gray-500">Loading...</p>
-          )}
-          {errors.petBreed && (
-            <p className="text-red-500 text-sm">{errors.petBreed}</p>
-          )}
-        </div>
-
-        <div className="flex gap-4">
-          <div>
-            <label htmlFor="startDate" className="block text-sm font-medium">
+          <div className="mb-4">
+            <label
+              htmlFor="startDate"
+              className="block text-sm font-medium text-gray-700"
+            >
               Check In
             </label>
-            <DatePicker
-              id="startDate"
-              selected={startDate}
-              onChange={(date) => setStartDate(date)}
-              className={`w-full p-2 border rounded-md ${
-                errors.startDate ? "border-red-500" : ""
-              }`}
-              dateFormat="yyyy/MM/dd"
-              placeholderText="Select a start date"
-              minDate={new Date()} // Minimum date to be today or any logic you want
-            />
+            <div className="relative">
+              <DatePicker
+                id="startDate"
+                selected={startDate}
+                onChange={(date) => setStartDate(date)}
+                className={`w-full p-3 pl-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.startDate ? "border-red-500" : "border-gray-300"
+                }`}
+                dateFormat="yyyy/MM/dd"
+                placeholderText="Select a start date"
+                minDate={new Date()}
+              />
+              <FaCalendarAlt className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
+            </div>
             {errors.startDate && (
-              <p className="text-red-500 text-sm">{errors.startDate}</p>
+              <p className="text-red-500 text-sm mt-1">{errors.startDate}</p>
             )}
           </div>
 
-          <div>
-            <label htmlFor="endDate" className="block text-sm font-medium">
+          <div className="mb-4">
+            <label
+              htmlFor="endDate"
+              className="block text-sm font-medium text-gray-700"
+            >
               Check Out
             </label>
-            <DatePicker
-              id="endDate"
-              selected={endDate}
-              onChange={(date) => setEndDate(date)}
-              className={`w-full p-2 border rounded-md ${
-                errors.endDate ? "border-red-500" : ""
-              }`}
-              dateFormat="yyyy/MM/dd"
-              placeholderText="Select an end date"
-              minDate={startDate} // Minimum date is the selected start date
-            />
+            <div className="relative">
+              <DatePicker
+                id="endDate"
+                selected={endDate}
+                onChange={(date) => setEndDate(date)}
+                className={`w-full p-3 pl-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.endDate ? "border-red-500" : "border-gray-300"
+                }`}
+                dateFormat="yyyy/MM/dd"
+                placeholderText="Select an end date"
+                minDate={startDate}
+              />
+              <FaCalendarAlt className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
+            </div>
             {errors.endDate && (
-              <p className="text-red-500 text-sm">{errors.endDate}</p>
+              <p className="text-red-500 text-sm mt-1">{errors.endDate}</p>
             )}
           </div>
-        </div>
 
-        {startDate && (
-          <div>
-            <h3 className="text-lg font-semibold pb-3">Select Kennels</h3>
-            <div className="space-y-2">
-              {availableKennels.length === 0 && <p>No kennels available</p>}
+          {startDate && (
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Select Kennels</h3>
+              {availableKennels.length === 0 && (
+                <p className="text-gray-500">No kennels available</p>
+              )}
               {availableKennels.length > 0 &&
                 availableKennels
                   .reduce((acc, kennel) => {
@@ -419,15 +484,17 @@ const ReservationForm = () => {
                     return acc;
                   }, [])
                   .map((set) => (
-                    <div key={set.name}>
-                      <h4 className="text-lg font-semibold mt-4">{set.name}</h4>
+                    <div key={set.name} className="mb-6">
+                      <h4 className="text-lg font-semibold mb-2">
+                        {set.name}
+                      </h4>
                       <div className="grid grid-cols-5 gap-4">
                         {set.kennels.map((kennel) => (
                           <div
                             key={kennel.id}
                             className={`p-4 text-center rounded-md cursor-pointer transition-all ${
                               selectedKennels.includes(kennel)
-                                ? "bg-yellow-500 text-white"
+                                ? "bg-blue-500 text-white"
                                 : "bg-gray-200 hover:bg-gray-300"
                             }`}
                             onClick={() => {
@@ -444,99 +511,47 @@ const ReservationForm = () => {
                       </div>
                     </div>
                   ))}
+              {errors.selectedKennels && (
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.selectedKennels}
+                </p>
+              )}
             </div>
-            {errors.selectedKennels && (
-              <p className="text-red-500 text-sm">{errors.selectedKennels}</p>
-            )}
-          </div>
-        )}
-
-        <div className="flex gap-4 mt-4">
-          <fieldset>
-            <legend className="text-lg font-medium text-gray-900">
-              Services
-            </legend>
-            <div className="mt-4 flex space-x-6 mb-3 ">
-              <label
-                htmlFor="pickup"
-                className="flex cursor-pointer items-start gap-2"
-              >
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="pickup"
-                    className="size-4 rounded border-gray-300"
-                    checked={pickup}
-                    onChange={() => setPickup(!pickup)}
-                  />
-                </div>
-                <div className="-mt-1">Pickup</div>
-              </label>
-
-              <label
-                htmlFor="groom"
-                className="flex cursor-pointer items-start gap-2"
-              >
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="groom"
-                    className="size-4 rounded border-gray-300"
-                    checked={groom}
-                    onChange={() => setGroom(!groom)}
-                  />
-                </div>
-                <div className="-mt-1">Groom</div>
-              </label>
-
-              <label
-                htmlFor="drop"
-                className="flex cursor-pointer items-start gap-2"
-              >
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="drop"
-                    className="size-4 rounded border-gray-300"
-                    checked={drop}
-                    onChange={() => setDrop(!drop)}
-                  />
-                </div>
-                <div className="-mt-1">Drop</div>
-              </label>
-            </div>
-          </fieldset>
+          )}
         </div>
+      </div>
 
-        <div className="flex justify-between mt-6">
-          <button
-            type="button"
-            className="bg-blue-500 text-white px-6 py-3 rounded-md hover:bg-blue-600 focus:outline-none"
-            onClick={createReservation}
-          >
-            Create Reservation
-          </button>
+      <div className="flex justify-end space-x-4 mt-8">
+        <button
+          type="button"
+          className="px-6 py-3 rounded-md bg-gray-300 text-gray-700 hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400"
+          onClick={clearForm}
+        >
+          Clear Form
+        </button>
 
-          <button
-            type="button"
-            className="bg-gray-300 text-gray-800 px-6 py-3 rounded-md hover:bg-gray-400 focus:outline-none"
-            onClick={clearForm}
-          >
-            Clear Form
-          </button>
-        </div>
+        <button
+          type="button"
+          className="px-6 py-3 rounded-md bg-blue-500 text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          onClick={createReservation}
+        >
+          Create Reservation
+        </button>
       </div>
 
       {isDialogOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
           <div className="bg-white p-6 rounded-lg shadow-lg">
-            <h3 className="text-lg font-bold">Reservation Created</h3>
-            <p className="text-sm text-gray-600 mt-2">
+            <div className="flex items-center mb-4">
+              <FaCheck className="text-green-500 mr-2" />
+              <h3 className="text-lg font-bold">Reservation Created</h3>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
               The reservation has been successfully created.
             </p>
             <button
               type="button"
-              className="mt-4 bg-blue-500 text-white px-6 py-3 rounded-md hover:bg-blue-600 focus:outline-none"
+              className="px-6 py-3 rounded-md bg-blue-500 text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
               onClick={() => setIsDialogOpen(false)}
             >
               OK

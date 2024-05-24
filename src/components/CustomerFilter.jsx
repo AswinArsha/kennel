@@ -12,23 +12,23 @@ const CustomerFilter = ({ onSearch, onDateFilter, onStatusFilter }) => {
   const handleSearch = (e) => {
     const query = e.target.value;
     setSearchQuery(query);
-    onSearch(query);
+    onSearch(query, filterStartDate, filterEndDate, filterStatus);
   };
 
   const handleStartDateChange = (date) => {
     setFilterStartDate(date);
-    onDateFilter(date, filterEndDate, filterStatus);
+    onDateFilter(searchQuery, date, filterEndDate, filterStatus);
   };
 
   const handleEndDateChange = (date) => {
     setFilterEndDate(date);
-    onDateFilter(filterStartDate, date, filterStatus);
+    onDateFilter(searchQuery, filterStartDate, date, filterStatus);
   };
 
   const handleStatusChange = (e) => {
     const status = e.target.value;
     setFilterStatus(status);
-    onStatusFilter(filterStartDate, filterEndDate, status);
+    onStatusFilter(searchQuery, filterStartDate, filterEndDate, status);
   };
 
   return (

@@ -5,8 +5,12 @@ export default {
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      maxHeight: {
+        'screen-80': '80vh',
+        'screen-60': '70vh',
+      },
+    },
   },
   plugins: [],
 }
-
