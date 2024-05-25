@@ -434,7 +434,7 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
                                     : "bg-white hover:bg-gray-100 transition-colors duration-300"
                                 } hover:bg-gray-200`}
                               >
-                                <td className="whitespace-nowrap px-3 py-2">
+                                <td className="whitespace-nowrap  px-3 py-2">
                                   {new Date(
                                     feeding.feeding_date
                                   ).toLocaleDateString()}

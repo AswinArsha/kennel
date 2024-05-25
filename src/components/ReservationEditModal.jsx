@@ -30,14 +30,15 @@ const ReservationEditModal = ({
     medical_notes: "",
   });
 
+  const [kennelNumber, setKennelNumber] = useState("");
+
   useEffect(() => {
     const fetchInfo = async () => {
       if (selectedReservation) {
-        const { data: reservationData, error: reservationError } =
-          await supabase
-            .from("reservations")
-            .select(
-              `
+        const { data: reservationData, error: reservationError } = await supabase
+          .from("reservations")
+          .select(
+            `
             *,
             customers:customer_id (
               customer_name,
@@ -45,9 +46,9 @@ const ReservationEditModal = ({
               customer_address
             )
           `
-            )
-            .eq("id", selectedReservation.id)
-            .single();
+          )
+          .eq("id", selectedReservation.id)
+          .single();
 
         if (!reservationError && reservationData) {
           setReservationInfo({
@@ -55,7 +56,9 @@ const ReservationEditModal = ({
             customer_name: reservationData.customers.customer_name,
             customer_phone: reservationData.customers.customer_phone,
             customer_address: reservationData.customers.customer_address,
+            kennel_ids: reservationData.kennel_ids.map(Number), // Add this line
           });
+          setKennelNumber(reservationData.kennel_ids[0].toString());
         } else {
           console.error("Error fetching reservation info:", reservationError);
         }
@@ -93,6 +96,9 @@ const ReservationEditModal = ({
 
   const saveInformation = async () => {
     if (selectedReservation) {
+      const newKennelId = parseInt(kennelNumber); // Ensure kennelNumber is parsed as integer
+  
+      // Update customer information if necessary
       const { error: customerError } = await supabase
         .from("customers")
         .update({
@@ -101,7 +107,52 @@ const ReservationEditModal = ({
           customer_address: reservationInfo.customer_address,
         })
         .eq("id", reservationInfo.customer_id);
-
+  
+      if (customerError) {
+        console.error("Error updating customer information:", customerError);
+        return;
+      }
+  
+      // Retrieve previous kennel status and update it if the kennel has changed
+      const previousKennelId = selectedReservation.kennel_ids[0];
+      if (previousKennelId !== newKennelId) {
+        // Fetch previous kennel data
+        const { data: previousKennelData, error: previousKennelError } =
+          await supabase
+            .from("kennels")
+            .select("status")
+            .eq("id", previousKennelId)
+            .single();
+  
+        if (previousKennelError) {
+          console.error("Error fetching previous kennel data:", previousKennelError);
+          return;
+        }
+  
+        // Update previous kennel status to 'available'
+        const { error: updatePreviousKennelError } = await supabase
+          .from("kennels")
+          .update({ status: "available" })
+          .eq("id", previousKennelId);
+  
+        if (updatePreviousKennelError) {
+          console.error("Error updating previous kennel status:", updatePreviousKennelError);
+          return;
+        }
+  
+        // Update new kennel status to the previous kennel's status
+        const { error: updateNewKennelError } = await supabase
+          .from("kennels")
+          .update({ status: previousKennelData.status })
+          .eq("id", newKennelId);
+  
+        if (updateNewKennelError) {
+          console.error("Error updating new kennel status:", updateNewKennelError);
+          return;
+        }
+      }
+  
+      // Update reservation information
       const { error: reservationError } = await supabase
         .from("reservations")
         .update({
@@ -110,13 +161,19 @@ const ReservationEditModal = ({
           start_date: reservationInfo.start_date,
           end_date: reservationInfo.end_date,
           status: reservationInfo.status,
-          kennel_ids: reservationInfo.kennel_ids,
+          kennel_ids: [newKennelId], // Save kennel number as integer array
           pickup: reservationInfo.pickup,
           groom: reservationInfo.groom,
           drop: reservationInfo.drop,
         })
         .eq("id", selectedReservation.id);
-
+  
+      if (reservationError) {
+        console.error("Error updating reservation:", reservationError);
+        return;
+      }
+  
+      // Update or insert pet information
       let petError = null;
       if (petInfo.id) {
         const { error } = await supabase
@@ -127,23 +184,26 @@ const ReservationEditModal = ({
             medical_notes: petInfo.medical_notes,
           })
           .eq("id", petInfo.id);
-
+  
         petError = error;
       } else {
-        const { error } = await supabase.from("pet_information").insert({
-          kennel_id: selectedReservation.kennel_ids[0],
-          reservation_id: selectedReservation.id,
-          dietary_requirements: petInfo.dietary_requirements,
-          special_care_instructions: petInfo.special_care_instructions,
-          medical_notes: petInfo.medical_notes,
-        });
-
+        const { error } = await supabase
+          .from("pet_information")
+          .insert({
+            kennel_id: newKennelId,
+            reservation_id: selectedReservation.id,
+            dietary_requirements: petInfo.dietary_requirements,
+            special_care_instructions: petInfo.special_care_instructions,
+            medical_notes: petInfo.medical_notes,
+          });
+  
         petError = error;
       }
-
+  
+      // Check for errors and handle success or failure
       if (!customerError && !reservationError && !petError) {
-        onClose();
-        onSave();
+        onClose(); // Close the modal
+        onSave(); // Trigger callback to update parent component or perform additional actions
       } else {
         console.error(
           "Error saving information:",
@@ -154,6 +214,7 @@ const ReservationEditModal = ({
       }
     }
   };
+  
 
   return (
     <Transition show={isOpen} as={Fragment}>
@@ -235,6 +296,15 @@ const ReservationEditModal = ({
                     pet_breed: e.target.value,
                   })
                 }
+              />
+            </div>
+            <div className="mt-4">
+              <label className="block font-semibold">Kennel Number</label>
+              <input
+                type="number"
+                className="w-full p-2 border rounded-md"
+                value={kennelNumber}
+                onChange={(e) => setKennelNumber(e.target.value)}
               />
             </div>
             <div className="mt-4">

@@ -44,12 +44,12 @@ const CustomerFilter = ({ onSearch, onDateFilter, onStatusFilter }) => {
         <FaSearch className="absolute top-3 left-3 text-gray-400" />
       </div>
 
-      <div className="flex flex-wrap gap-4 items-center w-full sm:w-auto">
+      <div className="flex flex-wrap  gap-4 items-center w-full sm:w-auto">
         <div className="relative w-full sm:w-auto">
           <DatePicker
             selected={filterStartDate}
             onChange={handleStartDateChange}
-            className="p-2 pl-8 pr-4 border rounded-md w-full"
+            className="p-2 pl-8 pr-4  border rounded-md w-full"
             dateFormat="yyyy/MM/dd"
             placeholderText="Check In"
           />

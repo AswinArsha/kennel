@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { supabase } from "../supabase";
+import React, { useEffect, useState } from 'react';
+import { supabase } from '../supabase';
 import {
   LineChart,
   Line,
@@ -14,7 +14,7 @@ import {
   BarChart,
   Bar,
   Legend,
-} from "recharts";
+} from 'recharts';
 import {
   FaUsers,
   FaMoneyBill,
@@ -22,7 +22,7 @@ import {
   FaDog,
   FaWarehouse,
   FaPercentage,
-} from "react-icons/fa";
+} from 'react-icons/fa';
 
 const Dashboard = () => {
   const [data, setData] = useState([]);
@@ -34,17 +34,17 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchData = async () => {
       let { data: analyticsData, error: analyticsError } = await supabase
-        .from("analytics")
-        .select("*");
+        .from('analytics')
+        .select('*');
       if (analyticsError)
-        console.log("Analytics data fetching error: ", analyticsError);
+        console.log('Analytics data fetching error: ', analyticsError);
       else setData(analyticsData);
 
       let { data: customersData, error: customersError } = await supabase
-        .from("customers")
-        .select("*");
+        .from('customers')
+        .select('*');
       if (customersError)
-        console.log("Customers data fetching error: ", customersError);
+        console.log('Customers data fetching error: ', customersError);
       else {
         setCustomers(customersData);
         const namesById = customersData.reduce((acc, customer) => {
@@ -55,17 +55,17 @@ const Dashboard = () => {
       }
 
       let { data: reservationsData, error: reservationsError } = await supabase
-        .from("historical_reservations")
-        .select("*");
+        .from('historical_reservations')
+        .select('*');
       if (reservationsError)
-        console.log("Reservations data fetching error: ", reservationsError);
+        console.log('Reservations data fetching error: ', reservationsError);
       else setReservations(reservationsData);
 
       let { data: kennelsData, error: kennelsError } = await supabase
-        .from("kennels")
-        .select("*");
+        .from('kennels')
+        .select('*');
       if (kennelsError)
-        console.log("Kennels data fetching error: ", kennelsError);
+        console.log('Kennels data fetching error: ', kennelsError);
       else setKennels(kennelsData);
     };
     fetchData();
@@ -110,15 +110,15 @@ const Dashboard = () => {
   // Kennel Utilization
   const totalKennels = kennels.length;
   const occupiedKennels = kennels.filter(
-    (kennel) => kennel.status !== "available"
+    (kennel) => kennel.status !== 'available'
   ).length;
   const occupancyRate = (occupiedKennels / totalKennels) * 100;
   const canceledReservations = reservations.filter(
-    (reservation) => reservation.status === "canceled"
+    (reservation) => reservation.status === 'canceled'
   ).length;
   const cancellationRate = (canceledReservations / totalReservations) * 100;
 
-  const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#AF19FF"];
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF'];
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -132,65 +132,71 @@ const Dashboard = () => {
   };
 
   return (
-    <div className=" min-h-screen">
+    <div className="min-h-screen">
       <header className="bg-gradient-to-r from-blue-500 to-purple-500 shadow">
-      
+        
       </header>
       <main>
         <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
           {/* Customer Insights */}
           <div className="px-4 py-6 sm:px-0">
-  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-    {/* Total Customers */}
-    <div className="bg-blue-50 p-4 rounded-lg shadow-lg flex items-center">
-      <FaUsers className="text-4xl text-blue-500 mr-4" />
-      <div>
-        <h3 className="text-lg font-semibold text-blue-800 mb-2">
-          Total Customers
-        </h3>
-        <p className="text-3xl font-bold text-blue-600">{totalCustomers}</p>
-      </div>
-    </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {/* Total Customers */}
+              <div className="bg-blue-50 p-4 rounded-lg shadow-lg flex items-center">
+                <FaUsers className="text-4xl text-blue-500 mr-4" />
+                <div>
+                  <h3 className="text-lg font-semibold text-blue-800 mb-2">
+                    Total Customers
+                  </h3>
+                  <p className="text-3xl font-bold text-blue-600">
+                    {totalCustomers}
+                  </p>
+                </div>
+              </div>
 
-    {/* Total Reservations */}
-    <div className="bg-green-50 p-4 rounded-lg shadow-lg flex items-center">
-      <FaChartLine className="text-4xl text-green-500 mr-4" />
-      <div>
-        <h3 className="text-lg font-semibold text-green-800 mb-2">
-          Total Reservations
-        </h3>
-        <p className="text-3xl font-bold text-green-600">{totalReservations}</p>
-      </div>
-    </div>
+              {/* Total Reservations */}
+              <div className="bg-green-50 p-4 rounded-lg shadow-lg flex items-center">
+                <FaChartLine className="text-4xl text-green-500 mr-4" />
+                <div>
+                  <h3 className="text-lg font-semibold text-green-800 mb-2">
+                    Total Reservations
+                  </h3>
+                  <p className="text-3xl font-bold text-green-600">
+                    {totalReservations}
+                  </p>
+                </div>
+              </div>
 
-    {/* Average Stay Duration */}
-    <div className="bg-yellow-50 p-4 rounded-lg shadow-lg flex items-center">
-      <FaWarehouse className="text-4xl text-yellow-500 mr-4" />
-      <div>
-        <h3 className="text-lg font-semibold text-yellow-800 mb-2">
-          Average Stay Duration
-        </h3>
-        <p className="text-3xl font-bold text-yellow-600">
-          {averageStayDuration.toFixed(2)} days
-        </p>
-      </div>
-    </div>
+              {/* Average Stay Duration */}
+              <div className="bg-yellow-50 p-4 rounded-lg shadow-lg flex items-center">
+                <FaWarehouse className="text-4xl text-yellow-500 mr-4" />
+                <div>
+                  <h3 className="text-lg font-semibold text-yellow-800 mb-2">
+                    Average Stay Duration
+                  </h3>
+                  <p className="text-3xl font-bold text-yellow-600">
+                    {averageStayDuration.toFixed(2)} days
+                  </p>
+                </div>
+              </div>
 
-    {/* Total Revenue */}
-    <div className="bg-purple-50 p-4 rounded-lg shadow-lg flex items-center">
-      <FaMoneyBill className="text-4xl text-purple-500 mr-4" />
-      <div>
-        <h3 className="text-lg font-semibold text-purple-800 mb-2">
-          Total Revenue
-        </h3>
-        <p className="text-3xl font-bold text-purple-600">₹{totalRevenue.toFixed(2)}</p>
-      </div>
-    </div>
-  </div>
-</div>
+              {/* Total Revenue */}
+              <div className="bg-purple-50 p-4 rounded-lg shadow-lg flex items-center">
+                <FaMoneyBill className="text-4xl text-purple-500 mr-4" />
+                <div>
+                  <h3 className="text-lg font-semibold text-purple-800 mb-2">
+                    Total Revenue
+                  </h3>
+                  <p className="text-3xl font-bold text-purple-600">
+                    ₹{totalRevenue.toFixed(2)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
 
-       {/* Reservation Metrics */}
-       <div className="px-4 py-6 sm:px-0">
+          {/* Reservation Metrics */}
+          <div className="px-4 py-6 sm:px-0">
             <div className="bg-white shadow-lg rounded-lg p-6">
               <h2 className="text-2xl font-semibold mb-6 text-green-800">
                 Reservation Metrics
@@ -199,7 +205,6 @@ const Dashboard = () => {
                 {/* Customer Reservation Frequency */}
                 <div>
                   <h3 className="text-lg font-semibold mb-4 flex items-center">
-                    
                     Customer Reservation Frequency
                   </h3>
                   <ResponsiveContainer width="100%" height={300}>
@@ -212,7 +217,10 @@ const Dashboard = () => {
                       )}
                     >
                       <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                      <XAxis dataKey="customerName" tick={{ fontSize: 14 }} />
+                      <XAxis
+                        dataKey="customerName"
+                        tick={{ fontSize: 14 }}
+                      />
                       <YAxis tick={{ fontSize: 14 }} />
                       <Tooltip content={<CustomTooltip />} />
                       <Legend />
@@ -228,14 +236,16 @@ const Dashboard = () => {
                 {/* Reservation Status Breakdown */}
                 <div>
                   <h3 className="text-lg font-semibold mb-2 ml-12 flex items-center">
-                    
                     Reservation Status Breakdown
                   </h3>
                   <ResponsiveContainer width="100%" height={300}>
                     <PieChart>
                       <Pie
                         data={Object.entries(reservationStatusBreakdown).map(
-                          ([status, count]) => ({ name: status, value: count })
+                          ([status, count]) => ({
+                            name: status,
+                            value: count,
+                          })
                         )}
                         dataKey="value"
                         nameKey="name"
@@ -260,43 +270,42 @@ const Dashboard = () => {
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-
-             
               </div>
-                 {/* Revenue Trends (Monthly) */}
-                 <div className="mt-8">
-                  <h3 className="text-lg font-semibold mb-6 flex items-center">
-                    
-                    Revenue Trends (Monthly)
-                  </h3>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart
-                      data={revenueByMonth.map((revenue, index) => ({
-                        month: new Date(0, index).toLocaleString("default", {
-                          month: "short",
-                        }),
-                        revenue,
-                      }))}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                      <XAxis dataKey="month" tick={{ fontSize: 14 }} />
-                      <YAxis tick={{ fontSize: 14 }} />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Legend />
-                      <Line
-                        type="monotone"
-                        dataKey="revenue"
-                        stroke="#10B981"
-                        name="Revenue"
-                        strokeWidth={2}
-                        dot={{ fill: "#10B981" }}
-                        activeDot={{ r: 8 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
+
+              {/* Revenue Trends (Monthly) */}
+              <div className="mt-8">
+                <h3 className="text-lg font-semibold mb-6 flex items-center">
+                  Revenue Trends (Monthly)
+                </h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart
+                    data={revenueByMonth.map((revenue, index) => ({
+                      month: new Date(0, index).toLocaleString('default', {
+                        month: 'short',
+                      }),
+                      revenue,
+                    }))}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                    <XAxis dataKey="month" tick={{ fontSize: 14 }} />
+                    <YAxis tick={{ fontSize: 14 }} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="revenue"
+                      stroke="#10B981"
+                      name="Revenue"
+                      strokeWidth={2}
+                      dot={{ fill: '#10B981' }}
+                      activeDot={{ r: 8 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </div>
+
           {/* Pet Insights */}
           <div className="px-4 py-6 sm:px-0">
             <div className="bg-white shadow-lg rounded-lg p-6">
@@ -306,7 +315,6 @@ const Dashboard = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <h3 className="text-lg font-semibold mb-4 flex items-center">
-                    
                     Popular Pet Breeds
                   </h3>
                   <ResponsiveContainer width="100%" height={300}>
@@ -326,7 +334,6 @@ const Dashboard = () => {
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold mb-4 flex items-center">
-                    
                     Pet Services Utilization
                   </h3>
                   <ResponsiveContainer width="100%" height={300}>
@@ -360,24 +367,20 @@ const Dashboard = () => {
                     <FaWarehouse className="mr-2 text-red-500" /> Total Kennels
                   </h3>
                   <p className="text-4xl font-bold text-red-600">
-                    {" "}
-                    {totalKennels}{" "}
+                    {totalKennels}
                   </p>
                 </div>
                 <div className="bg-red-50 p-4 rounded-lg shadow">
                   <h3 className="text-lg font-semibold mb-2 flex items-center">
-                    <FaWarehouse className="mr-2 text-red-500" /> Occupied
-                    Kennels
+                    <FaWarehouse className="mr-2 text-red-500" /> Occupied Kennels
                   </h3>
                   <p className="text-4xl font-bold text-red-600">
-                    {" "}
-                    {occupiedKennels}{" "}
+                    {occupiedKennels}
                   </p>
                 </div>
                 <div className="bg-red-50 p-4 rounded-lg shadow">
                   <h3 className="text-lg font-semibold mb-2 flex items-center">
-                    <FaPercentage className="mr-2 text-red-500" /> Occupancy
-                    Rate
+                    <FaPercentage className="mr-2 text-red-500" /> Occupancy Rate
                   </h3>
                   <div className="flex items-center">
                     <div className="w-full bg-gray-200 rounded-full h-4">
@@ -393,8 +396,7 @@ const Dashboard = () => {
                 </div>
                 <div className="bg-red-50 p-4 rounded-lg shadow">
                   <h3 className="text-lg font-semibold mb-2 flex items-center">
-                    <FaPercentage className="mr-2 text-red-500" /> Cancellation
-                    Rate
+                    <FaPercentage className="mr-2 text-red-500" /> Cancellation Rate
                   </h3>
                   <div className="flex items-center">
                     <div className="w-full bg-gray-200 rounded-full h-4">

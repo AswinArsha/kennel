@@ -3,7 +3,7 @@ import PropTypes from "prop-types";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { supabase } from "../supabase";
-import { FaCheck, FaTimes, FaCalendarAlt, FaDog } from "react-icons/fa";
+import { FaCheck, FaTimes, FaCalendarAlt } from "react-icons/fa";
 
 const ReservationForm = () => {
   const [customerName, setCustomerName] = useState("");
@@ -20,8 +20,11 @@ const ReservationForm = () => {
   const [drop, setDrop] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [errors, setErrors] = useState({});
-  const [breedOptions, setBreedOptions] = useState([]);
-  const [breedLoading, setBreedLoading] = useState(false);
+
+const [breedOptions, setBreedOptions] = useState([]);
+const [breedLoading, setBreedLoading] = useState(false);
+const [breedError, setBreedError] = useState(null);
+const [showBreedOptions, setShowBreedOptions] = useState(false);
 
   const validationRules = {
     customerName: { required: true, message: "Please enter the customer name" },
@@ -86,7 +89,7 @@ const ReservationForm = () => {
   const handleCustomerPhoneChange = async (e) => {
     const phone = e.target.value;
     setCustomerPhone(phone);
-  
+
     if (phone.trim() !== "") {
       const customerData = await fetchCustomerDetails(phone);
       if (customerData) {
@@ -122,18 +125,17 @@ const ReservationForm = () => {
     if (validateForm()) {
       let customerData;
       let customerError;
-
-      const { data: existingCustomers, error: fetchCustomerError } =
-        await supabase
-          .from("customers")
-          .select("*")
-          .eq("customer_phone", customerPhone);
-
+  
+      const { data: existingCustomers, error: fetchCustomerError } = await supabase
+        .from("customers")
+        .select("*")
+        .eq("customer_phone", customerPhone);
+  
       if (fetchCustomerError) {
         console.error("Error fetching customer:", fetchCustomerError.message);
         return;
       }
-
+  
       if (existingCustomers.length > 0) {
         customerData = existingCustomers[0];
       } else {
@@ -147,15 +149,17 @@ const ReservationForm = () => {
             },
           ])
           .select();
-
+  
         if (newCustomerError) {
           console.error("Error creating customer:", newCustomerError.message);
           return;
         }
-
+  
         customerData = newCustomer[0];
       }
-
+  
+      const reservationStatus = endDate < new Date() ? "checked_out" : "pending";
+  
       const { error: reservationError } = await supabase
         .from("reservations")
         .insert({
@@ -164,21 +168,22 @@ const ReservationForm = () => {
           pet_breed: petBreed,
           start_date: startDate,
           end_date: endDate,
-          status: "pending",
+          status: reservationStatus,
           kennel_ids: selectedKennels.map((k) => k.id),
           pickup,
           groom,
           drop,
         });
-
+  
       if (reservationError) {
         console.error("Error creating reservation:", reservationError.message);
       } else {
         await Promise.all(
           selectedKennels.map(async (kennel) => {
+            const kennelStatus = reservationStatus === "checked_out" ? "available" : "reserved";
             await supabase
               .from("kennels")
-              .update({ status: "reserved" })
+              .update({ status: kennelStatus })
               .eq("id", kennel.id);
           })
         );
@@ -186,17 +191,16 @@ const ReservationForm = () => {
       }
     }
   };
-
   useEffect(() => {
     if (startDate) {
       fetchAvailableKennels();
     }
   }, [startDate]);
-
   useEffect(() => {
     const fetchBreedOptions = async () => {
       if (petBreed.trim() !== "") {
         setBreedLoading(true);
+        setBreedError(null);
         try {
           const response = await fetch(
             `https://api.thedogapi.com/v1/breeds/search?q=${petBreed}`
@@ -208,6 +212,7 @@ const ReservationForm = () => {
           setBreedOptions(data.map((breed) => breed.name));
         } catch (error) {
           console.error("Error fetching breed options:", error);
+          setBreedError("Failed to fetch breed options");
         } finally {
           setBreedLoading(false);
         }
@@ -215,9 +220,26 @@ const ReservationForm = () => {
         setBreedOptions([]);
       }
     };
-
+  
     fetchBreedOptions();
   }, [petBreed]);
+  
+  const handleBreedSelect = (breed) => {
+    setPetBreed(breed);
+    setShowBreedOptions(false);
+  };
+  
+  const handleBreedInputFocus = () => {
+    setShowBreedOptions(true);
+  };
+  
+  const handleBreedInputBlur = () => {
+    setTimeout(() => {
+      setShowBreedOptions(false);
+    }, 200);
+  };
+  
+
 
   const clearForm = () => {
     setCustomerName("");
@@ -235,10 +257,11 @@ const ReservationForm = () => {
     setBreedOptions([]);
   };
 
-
   return (
     <div className="max-w-screen-xl mx-auto p-6 bg-white rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold mb-6 text-center">Create Reservation</h2>
+      <h2 className="text-2xl font-bold mb-6 text-center">
+        Create Reservation
+      </h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div>
           <div className="mb-4">
@@ -258,9 +281,7 @@ const ReservationForm = () => {
               onChange={(e) => setCustomerName(e.target.value)}
             />
             {errors.customerName && (
-              <p className="text-red-500 text-sm mt-1">
-                {errors.customerName}
-              </p>
+              <p className="text-red-500 text-sm mt-1">{errors.customerName}</p>
             )}
           </div>
 
@@ -283,7 +304,7 @@ const ReservationForm = () => {
             {errors.customerPhone && (
               <p className="text-red-500 text-sm mt-1">
                 {errors.customerPhone}
-              </p>
+                </p>
             )}
           </div>
 
@@ -311,24 +332,27 @@ const ReservationForm = () => {
           </div>
 
           <div className="mb-4">
-  <label htmlFor="petName" className="block text-sm font-medium text-gray-700">
-    Pet Name
-  </label>
-  <input
-    type="text"
-    id="petName"
-    className={`w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-      errors.petName ? "border-red-500" : "border-gray-300"
-    }`}
-    value={petName}
-    onChange={(e) => setPetName(e.target.value)}
-  />
-  {errors.petName && (
-    <p className="text-red-500 text-sm mt-1">{errors.petName}</p>
-  )}
-</div>
+            <label
+              htmlFor="petName"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Pet Name
+            </label>
+            <input
+              type="text"
+              id="petName"
+              className={`w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                errors.petName ? "border-red-500" : "border-gray-300"
+              }`}
+              value={petName}
+              onChange={(e) => setPetName(e.target.value)}
+            />
+            {errors.petName && (
+              <p className="text-red-500 text-sm mt-1">{errors.petName}</p>
+            )}
+          </div>
 
-<div className="mb-4">
+          <div className="mb-4 relative">
   <label htmlFor="petBreed" className="block text-sm font-medium text-gray-700">
     Pet Breed
   </label>
@@ -340,22 +364,29 @@ const ReservationForm = () => {
     }`}
     value={petBreed}
     onChange={(e) => setPetBreed(e.target.value)}
+    onFocus={handleBreedInputFocus}
+    onBlur={handleBreedInputBlur}
   />
-  {breedOptions.length > 0 && (
-    <ul className="mt-1 border rounded-md border-gray-300 bg-white">
-      {breedOptions.map((breed, index) => (
-        <li
-          key={index}
-          className="px-3 py-2 cursor-pointer hover:bg-gray-100"
-          onClick={() => setPetBreed(breed)}
-        >
-          {breed}
-        </li>
-      ))}
+  {showBreedOptions && (
+    <ul className="absolute z-10 w-full mt-1 bg-white border rounded-md border-gray-300 shadow-lg">
+      {breedLoading && (
+        <li className="px-3 py-2 text-sm text-gray-500">Loading...</li>
+      )}
+      {breedError && (
+        <li className="px-3 py-2 text-sm text-red-500">{breedError}</li>
+      )}
+      {!breedLoading &&
+        !breedError &&
+        breedOptions.map((breed, index) => (
+          <li
+            key={index}
+            className="px-3 py-2 cursor-pointer text-sm hover:bg-gray-100"
+            onClick={() => handleBreedSelect(breed)}
+          >
+            {breed}
+          </li>
+        ))}
     </ul>
-  )}
-  {breedLoading && (
-    <p className="mt-1 text-sm text-gray-500">Loading...</p>
   )}
   {errors.petBreed && (
     <p className="text-red-500 text-sm mt-1">{errors.petBreed}</p>
@@ -485,9 +516,7 @@ const ReservationForm = () => {
                   }, [])
                   .map((set) => (
                     <div key={set.name} className="mb-6">
-                      <h4 className="text-lg font-semibold mb-2">
-                        {set.name}
-                      </h4>
+                      <h4 className="text-lg font-semibold mb-2">{set.name}</h4>
                       <div className="grid grid-cols-5 gap-4">
                         {set.kennels.map((kennel) => (
                           <div
@@ -540,27 +569,30 @@ const ReservationForm = () => {
       </div>
 
       {isDialogOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
-          <div className="bg-white p-6 rounded-lg shadow-lg">
-            <div className="flex items-center mb-4">
-              <FaCheck className="text-green-500 mr-2" />
-              <h3 className="text-lg font-bold">Reservation Created</h3>
+              <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
+              <div className="bg-white p-6 rounded-lg shadow-lg">
+                <div className="flex items-center mb-4">
+                  <FaCheck className="text-green-500 mr-2" />
+                  <h3 className="text-lg font-bold">Reservation Created</h3>
+                </div>
+                <p className="text-sm text-gray-600 mb-4">
+                  The reservation has been successfully created.
+                </p>
+                <button
+                  type="button"
+                  className="px-6 py-3 rounded-md bg-blue-500 text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onClick={() => {
+                    setIsDialogOpen(false);
+                    clearForm();
+                  }}
+                >
+                  OK
+                </button>
+              </div>
             </div>
-            <p className="text-sm text-gray-600 mb-4">
-              The reservation has been successfully created.
-            </p>
-            <button
-              type="button"
-              className="px-6 py-3 rounded-md bg-blue-500 text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              onClick={() => setIsDialogOpen(false)}
-            >
-              OK
-            </button>
-          </div>
+          )}
         </div>
-      )}
-    </div>
-  );
-};
-
-export default ReservationForm;
+      );
+    };
+    
+    export default ReservationForm;

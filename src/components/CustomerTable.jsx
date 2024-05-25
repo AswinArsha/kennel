@@ -35,7 +35,6 @@ const CustomerTable = ({
     if (error) {
       console.error("Error fetching customers:", error.message);
     } else {
-      // Fetch additional data from customers
       const customerIds = historicalReservations.map(
         (reservation) => reservation.customer_id
       );
@@ -49,7 +48,6 @@ const CustomerTable = ({
         return;
       }
 
-      // Map customer data to historical reservations
       const enhancedReservations = historicalReservations.map((reservation) => {
         const customer = customersData.find(
           (c) => c.id === reservation.customer_id
@@ -122,8 +120,11 @@ const CustomerTable = ({
       <div className="overflow-x-auto rounded-lg border border-gray-200 ">
         <div className="max-h-[530px] overflow-y-auto">
           <table className="min-w-full divide-y-2 divide-gray-200 bg-white text-sm">
-            <thead className="bg-gray-50 sticky top-0 z-10">
+            <thead className="bg-gray-50 sticky top-0 z-0">
               <tr>
+                <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
+                  No.
+                </th>
                 <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
                   Customer Name
                 </th>
@@ -151,30 +152,33 @@ const CustomerTable = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {filteredCustomers.map((customer) => (
+              {filteredCustomers.map((customer, index) => (
                 <tr key={customer.id} className="bg-white hover:bg-gray-100">
-                  <td className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
+                  <td className="whitespace-nowrap text-center px-4 py-2 font-medium text-gray-900">
+                    {index + 1}
+                  </td>
+                  <td className="whitespace-nowrap text-center px-4 py-2 font-medium text-gray-900">
                     {customer.customer_name}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-2 text-gray-700">
+                  <td className="whitespace-nowrap text-center px-4 py-2 text-gray-700">
                     {customer.customer_phone}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-2 text-gray-700">
+                  <td className="whitespace-nowrap text-center px-4 py-2 text-gray-700">
                     {customer.customer_address}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-2 text-gray-700">
+                  <td className="whitespace-nowrap text-center px-4 py-2 text-gray-700">
                     {new Date(customer.start_date).toLocaleDateString()}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-2 text-gray-700">
+                  <td className="whitespace-nowrap text-center px-4 py-2 text-gray-700">
                     {new Date(customer.end_date).toLocaleDateString()}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-2 text-gray-700">
+                  <td className="whitespace-nowrap text-center px-4 py-2 text-gray-700">
                     {customer.pet_breed}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-2 text-gray-700">
+                  <td className="whitespace-nowrap text-center px-4 py-2 text-gray-700">
                     {new Date(customer.created_at).toLocaleDateString()}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-2 text-gray-800">
+                  <td className="whitespace-nowrap text-center px-4 py-2 text-gray-800">
                     <span
                       className={`rounded py-1 px-3 text-xs font-bold ${
                         customer.status === "confirmed"
