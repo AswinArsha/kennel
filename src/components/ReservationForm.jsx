@@ -160,6 +160,11 @@ const [showBreedOptions, setShowBreedOptions] = useState(false);
   
       const reservationStatus = endDate < new Date() ? "checked_out" : "pending";
   
+      const selectedKennelsWithNumbers = selectedKennels.map((kennel) => ({
+        id: kennel.id,
+        number: kennel.kennel_number,
+      }));
+  
       const { error: reservationError } = await supabase
         .from("reservations")
         .insert({
@@ -169,7 +174,8 @@ const [showBreedOptions, setShowBreedOptions] = useState(false);
           start_date: startDate,
           end_date: endDate,
           status: reservationStatus,
-          kennel_ids: selectedKennels.map((k) => k.id),
+          kennel_ids: selectedKennelsWithNumbers.map((kennel) => kennel.id),
+          kennel_numbers: selectedKennelsWithNumbers.map((kennel) => kennel.number),
           pickup,
           groom,
           drop,
@@ -191,6 +197,8 @@ const [showBreedOptions, setShowBreedOptions] = useState(false);
       }
     }
   };
+
+  
   useEffect(() => {
     if (startDate) {
       fetchAvailableKennels();

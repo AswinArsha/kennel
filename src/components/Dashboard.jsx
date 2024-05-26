@@ -1,5 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { supabase } from '../supabase';
+import React, { useEffect, useState } from "react";
+import { supabase } from "../supabase";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import { addDays } from "date-fns";
 import {
   LineChart,
   Line,
@@ -14,7 +17,7 @@ import {
   BarChart,
   Bar,
   Legend,
-} from 'recharts';
+} from "recharts";
 import {
   FaUsers,
   FaMoneyBill,
@@ -22,7 +25,7 @@ import {
   FaDog,
   FaWarehouse,
   FaPercentage,
-} from 'react-icons/fa';
+} from "react-icons/fa";
 
 const Dashboard = () => {
   const [data, setData] = useState([]);
@@ -30,21 +33,34 @@ const Dashboard = () => {
   const [reservations, setReservations] = useState([]);
   const [kennels, setKennels] = useState([]);
   const [customerNamesById, setCustomerNamesById] = useState({});
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
       let { data: analyticsData, error: analyticsError } = await supabase
-        .from('analytics')
-        .select('*');
+        .from("analytics")
+        .select("*")
+        .gte(
+          "start_date",
+          startDate ? startDate.toISOString().slice(0, 10) : "1900-01-01"
+        )
+        .lte(
+          "end_date",
+          endDate
+            ? addDays(endDate, 1).toISOString().slice(0, 10)
+            : "2100-12-31"
+        );
+
       if (analyticsError)
-        console.log('Analytics data fetching error: ', analyticsError);
+        console.log("Analytics data fetching error: ", analyticsError);
       else setData(analyticsData);
 
       let { data: customersData, error: customersError } = await supabase
-        .from('customers')
-        .select('*');
+        .from("customers")
+        .select("*");
       if (customersError)
-        console.log('Customers data fetching error: ', customersError);
+        console.log("Customers data fetching error: ", customersError);
       else {
         setCustomers(customersData);
         const namesById = customersData.reduce((acc, customer) => {
@@ -55,24 +71,40 @@ const Dashboard = () => {
       }
 
       let { data: reservationsData, error: reservationsError } = await supabase
-        .from('historical_reservations')
-        .select('*');
+        .from("historical_reservations")
+        .select("*")
+        .gte(
+          "start_date",
+          startDate ? startDate.toISOString().slice(0, 10) : "1900-01-01"
+        )
+        .lte(
+          "end_date",
+          endDate
+            ? addDays(endDate, 1).toISOString().slice(0, 10)
+            : "2100-12-31"
+        );
       if (reservationsError)
-        console.log('Reservations data fetching error: ', reservationsError);
+        console.log("Reservations data fetching error: ", reservationsError);
       else setReservations(reservationsData);
 
       let { data: kennelsData, error: kennelsError } = await supabase
-        .from('kennels')
-        .select('*');
+        .from("kennels")
+        .select("*");
       if (kennelsError)
-        console.log('Kennels data fetching error: ', kennelsError);
+        console.log("Kennels data fetching error: ", kennelsError);
       else setKennels(kennelsData);
     };
     fetchData();
-  }, []);
+  }, [startDate, endDate]);
 
   // Customer Insights
-  const totalCustomers = customers.length;
+  const totalCustomers = customers.filter((customer) => {
+    const createdAt = new Date(customer.created_at);
+    return (
+      createdAt >= (startDate || new Date("1900-01-01")) &&
+      createdAt <= (endDate || new Date("2100-12-31"))
+    );
+  }).length;
   const customerReservationFrequency = data.reduce((acc, curr) => {
     const customerName = customerNamesById[curr.customer_id];
     acc[customerName] = (acc[customerName] || 0) + 1;
@@ -110,15 +142,15 @@ const Dashboard = () => {
   // Kennel Utilization
   const totalKennels = kennels.length;
   const occupiedKennels = kennels.filter(
-    (kennel) => kennel.status !== 'available'
+    (kennel) => kennel.status !== "available"
   ).length;
   const occupancyRate = (occupiedKennels / totalKennels) * 100;
   const canceledReservations = reservations.filter(
-    (reservation) => reservation.status === 'canceled'
+    (reservation) => reservation.status === "canceled"
   ).length;
   const cancellationRate = (canceledReservations / totalReservations) * 100;
 
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF'];
+  const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#AF19FF"];
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -133,11 +165,39 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen">
-      <header className="bg-gradient-to-r from-blue-500 to-purple-500 shadow">
-        
-      </header>
+      <header className="bg-gradient-to-r from-blue-500 to-purple-500 shadow"></header>
       <main>
         <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+          {/* Date Range Picker */}
+          <div className="flex items-center mb-4">
+            <label htmlFor="startDate" className="mr-2">
+              Start Date:
+            </label>
+            <DatePicker
+              id="startDate"
+              selected={startDate}
+              onChange={(date) => setStartDate(date)}
+              selectsStart
+              startDate={startDate}
+              endDate={endDate}
+              dateFormat="yyyy-MM-dd"
+              className="border border-gray-300 rounded px-2 py-1"
+            />
+            <label htmlFor="endDate" className="ml-4 mr-2">
+              End Date:
+            </label>
+            <DatePicker
+              id="endDate"
+              selected={endDate}
+              onChange={(date) => setEndDate(date)}
+              selectsEnd
+              startDate={startDate}
+              endDate={endDate}
+              minDate={startDate}
+              dateFormat="yyyy-MM-dd"
+              className="border border-gray-300 rounded px-2 py-1"
+            />
+          </div>
           {/* Customer Insights */}
           <div className="px-4 py-6 sm:px-0">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -209,6 +269,7 @@ const Dashboard = () => {
                   </h3>
                   <ResponsiveContainer width="100%" height={300}>
                     <BarChart
+                      key={`${startDate}-${endDate}`}
                       data={Object.entries(customerReservationFrequency).map(
                         ([customerName, frequency]) => ({
                           customerName,
@@ -217,10 +278,7 @@ const Dashboard = () => {
                       )}
                     >
                       <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                      <XAxis
-                        dataKey="customerName"
-                        tick={{ fontSize: 14 }}
-                      />
+                      <XAxis dataKey="customerName" tick={{ fontSize: 14 }} />
                       <YAxis tick={{ fontSize: 14 }} />
                       <Tooltip content={<CustomTooltip />} />
                       <Legend />
@@ -241,6 +299,7 @@ const Dashboard = () => {
                   <ResponsiveContainer width="100%" height={300}>
                     <PieChart>
                       <Pie
+                        key={`${startDate}-${endDate}`}
                         data={Object.entries(reservationStatusBreakdown).map(
                           ([status, count]) => ({
                             name: status,
@@ -279,9 +338,10 @@ const Dashboard = () => {
                 </h3>
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart
+                    key={`${startDate}-${endDate}`}
                     data={revenueByMonth.map((revenue, index) => ({
-                      month: new Date(0, index).toLocaleString('default', {
-                        month: 'short',
+                      month: new Date(0, index).toLocaleString("default", {
+                        month: "short",
                       }),
                       revenue,
                     }))}
@@ -297,7 +357,7 @@ const Dashboard = () => {
                       stroke="#10B981"
                       name="Revenue"
                       strokeWidth={2}
-                      dot={{ fill: '#10B981' }}
+                      dot={{ fill: "#10B981" }}
                       activeDot={{ r: 8 }}
                     />
                   </LineChart>
@@ -372,7 +432,8 @@ const Dashboard = () => {
                 </div>
                 <div className="bg-red-50 p-4 rounded-lg shadow">
                   <h3 className="text-lg font-semibold mb-2 flex items-center">
-                    <FaWarehouse className="mr-2 text-red-500" /> Occupied Kennels
+                    <FaWarehouse className="mr-2 text-red-500" /> Occupied
+                    Kennels
                   </h3>
                   <p className="text-4xl font-bold text-red-600">
                     {occupiedKennels}
@@ -380,7 +441,8 @@ const Dashboard = () => {
                 </div>
                 <div className="bg-red-50 p-4 rounded-lg shadow">
                   <h3 className="text-lg font-semibold mb-2 flex items-center">
-                    <FaPercentage className="mr-2 text-red-500" /> Occupancy Rate
+                    <FaPercentage className="mr-2 text-red-500" /> Occupancy
+                    Rate
                   </h3>
                   <div className="flex items-center">
                     <div className="w-full bg-gray-200 rounded-full h-4">
@@ -396,7 +458,8 @@ const Dashboard = () => {
                 </div>
                 <div className="bg-red-50 p-4 rounded-lg shadow">
                   <h3 className="text-lg font-semibold mb-2 flex items-center">
-                    <FaPercentage className="mr-2 text-red-500" /> Cancellation Rate
+                    <FaPercentage className="mr-2 text-red-500" /> Cancellation
+                    Rate
                   </h3>
                   <div className="flex items-center">
                     <div className="w-full bg-gray-200 rounded-full h-4">

@@ -1,21 +1,153 @@
 ### To-Do List: Kennel Improvement
 
-1. **Add Photos for Infection Check in Edit Form**
-   - Include two photo upload options in the edit form to check if a dog has an infection.
+there's an issue with the Kennel Number input functionality. Here's what's happening:
 
-2. **Billing on Checkout**
-   - Generate a bill with a base rate of 400 per day.
-   - Allow owners to adjust the per-day rate and total bill.
-   - Calculate the final bill based on adjustments.
+1. **Kennel Number Input Behavior:**
 
-3. **Update Date Labels**
-   - Change "start date" to "check-in date."
-   - Change "end date" to "check-out date."
+   - When entering a kennel number (e.g., 10) in the Kennel Number input field, it gets saved as 9 in the database and reservation table.
 
-4. **Update Reservation Form**
-   - Remove the customer email field.
-   - Add fields for pet name and breed.
+2. **Edit Modal Display:**
 
-5. **Advance Payment and Billing Start**
-   - Ensure that after confirmation, it indicates that advance payment has been received.
-   - Start billing from the pet's check-in date and end billing on the check-out date.
+   - Upon opening the edit modal for the reservation:
+     - The Kennel Number input shows as 10, which is different from the stored value (9) in the database and reservation table.
+
+3. **Expected Behavior:**
+
+   - The Kennel Number input in both the reservation form and edit modal should consistently display and save the same value.
+   - Ensure that when a user enters a kennel number (e.g., 10), it should be saved correctly as 10 in the database and reflected as 10 in both the reservation form and edit modal.
+
+4. **Resolution Requested:**
+   - Please investigate and resolve the discrepancy where the entered Kennel Number (e.g., 10) is saved as 9 in the database but displayed as 10 in the edit modal.
+
+By addressing this issue, we can ensure consistency and accuracy in displaying and saving kennel numbers across the application.
+
+### Old Kennel tables 
+
+create table
+  public.analytics (
+    id serial,
+    customer_id integer not null,
+    customer_name character varying(255) not null,
+    customer_phone character varying(15) not null,
+    customer_address character varying(255) not null,
+    pet_name character varying(255) not null,
+    pet_breed character varying(255) not null,
+    start_date date not null,
+    end_date date not null,
+    days_stayed integer not null,
+    per_day_bill numeric(10, 2) not null,
+    total_bill numeric(10, 2) not null,
+    pickup boolean null,
+    groom boolean null,
+    drop boolean null,
+    kennel_numbers integer[] not null,
+    created_at timestamp without time zone null default current_timestamp,
+    constraint analytics_pkey primary key (id),
+    constraint analytics_customer_id_fkey foreign key (customer_id) references customers (id)
+  ) tablespace pg_default;
+  
+  ,
+  create table
+  public.bills (
+    id serial,
+    pet_name character varying(255) not null,
+    pet_breed character varying(255) not null,
+    check_in_date date not null,
+    check_out_date date not null,
+    per_day_bill numeric(10, 2) not null,
+    total_bill numeric(10, 2) not null,
+    created_at timestamp without time zone null default now(),
+    customer_id integer not null,
+    customer_name character varying(255) not null,
+    constraint bills_pkey primary key (id),
+    constraint bills_customer_id_fkey foreign key (customer_id) references customers (id)
+  ) tablespace pg_default;
+  ,
+  create table
+  public.customers (
+    id serial,
+    customer_name character varying(255) not null,
+    customer_phone character varying(15) not null,
+    customer_address character varying(255) not null,
+    created_at timestamp without time zone null default current_timestamp,
+    constraint customers_pkey primary key (id),
+    constraint customers_customer_phone_key unique (customer_phone)
+  ) tablespace pg_default;
+  ,
+  create table
+  public.feeding_schedule (
+    id serial,
+    kennel_id integer null,
+    feeding_date date null,
+    feeding_time character varying(10) null,
+    fed boolean null,
+    eaten boolean null,
+    created_at timestamp without time zone null default current_timestamp,
+    constraint feeding_schedule_pkey primary key (id),
+    constraint feeding_schedule_unique unique (kennel_id, feeding_date, feeding_time),
+    constraint feeding_schedule_kennel_id_fkey foreign key (kennel_id) references kennels (id)
+  ) tablespace pg_default;
+  ,
+  create table
+  public.historical_reservations (
+    id serial,
+    customer_id integer not null,
+    pet_name character varying(255) not null,
+    pet_breed character varying(255) not null,
+    start_date date not null,
+    end_date date not null,
+    status character varying(20) null default 'pending'::character varying,
+    kennel_ids integer[] null,
+    pickup boolean null default false,
+    groom boolean null default false,
+    drop boolean null default false,
+    created_at timestamp without time zone not null default current_timestamp,
+    constraint historical_reservations_pkey primary key (id),
+    constraint historical_reservations_customer_id_fkey foreign key (customer_id) references customers (id)
+  ) tablespace pg_default;
+  ,
+  create table
+  public.kennels (
+    id serial,
+    kennel_number integer not null,
+    status character varying(20) not null default 'available'::character varying,
+    set_name character varying(255) null default 'Maintenance'::character varying,
+    updated_at timestamp without time zone not null default now(),
+    constraint kennels_pkey primary key (id)
+  ) tablespace pg_default;
+  ,
+  create table
+  public.pet_information (
+    id serial,
+    kennel_id integer null,
+    reservation_id integer null,
+    dietary_requirements text null,
+    special_care_instructions text null,
+    medical_notes text null,
+    created_at timestamp without time zone null default current_timestamp,
+    updated_at timestamp without time zone null default current_timestamp,
+    constraint pet_information_pkey primary key (id),
+    constraint pet_information_kennel_id_fkey foreign key (kennel_id) references kennels (id),
+    constraint pet_information_reservation_id_fkey foreign key (reservation_id) references reservations (id)
+  ) tablespace pg_default;
+  ,
+  create table
+  public.reservations (
+    id serial,
+    pet_name character varying(255) not null,
+    pet_breed character varying(255) not null,
+    start_date date not null,
+    end_date date not null,
+    status character varying(20) null default 'pending'::character varying,
+    kennel_ids integer[] null,
+    pickup boolean null default false,
+    groom boolean null default false,
+    drop boolean null default false,
+    created_at timestamp without time zone null default current_timestamp,
+    customer_id integer not null,
+    kennel_numbers jsonb null,
+    constraint reservations_pkey primary key (id),
+    constraint reservations_customer_id_fkey foreign key (customer_id) references customers (id)
+  ) tablespace pg_default;
+
+
