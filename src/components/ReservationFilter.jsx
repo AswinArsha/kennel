@@ -1,16 +1,19 @@
 import React from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { FaSearch, FaCalendarAlt } from "react-icons/fa";
+import { FaSearch, FaCalendarAlt, FaFilter } from "react-icons/fa";
 
 const ReservationFilter = ({
   searchQuery,
   filterStartDate,
   filterEndDate,
+  filterStatus,
   onSearchChange,
   onDateFilter,
+  onStatusFilterChange,
   setFilterStartDate,
   setFilterEndDate,
+  setFilterStatus,
 }) => {
   const handleStartDateChange = (date) => {
     setFilterStartDate(date);
@@ -20,6 +23,11 @@ const ReservationFilter = ({
   const handleEndDateChange = (date) => {
     setFilterEndDate(date);
     onDateFilter(filterStartDate, date);
+  };
+
+  const handleStatusChange = (e) => {
+    setFilterStatus(e.target.value);
+    onStatusFilterChange(e.target.value);
   };
 
   return (
@@ -57,6 +65,19 @@ const ReservationFilter = ({
             minDate={filterStartDate}
           />
           <FaCalendarAlt className="absolute top-1/2 left-3 transform -translate-y-1/2 text-gray-400" />
+        </div>
+
+        <div className="relative w-full md:w-auto">
+          <select
+            value={filterStatus}
+            onChange={handleStatusChange}
+            className="p-3 pl-10 pr-4 border rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="confirmed">Confirmed</option>
+          </select>
+          <FaFilter className="absolute top-1/2 left-3 transform -translate-y-1/2 text-gray-400" />
         </div>
       </div>
     </div>

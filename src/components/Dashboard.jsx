@@ -163,13 +163,18 @@ const Dashboard = () => {
     return null;
   };
 
+  const handleClearDates = () => {
+    setStartDate(null);
+    setEndDate(null);
+  };
+
   return (
     <div className="min-h-screen">
       <header className="bg-gradient-to-r from-blue-500 to-purple-500 shadow"></header>
       <main>
         <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
           {/* Date Range Picker */}
-          <div className="flex items-center mb-4">
+          <div className="flex items-center mb-4 bg-gray-50 p-5 rounded-lg shadow-md ">
             <label htmlFor="startDate" className="mr-2">
               Start Date:
             </label>
@@ -197,12 +202,18 @@ const Dashboard = () => {
               dateFormat="yyyy-MM-dd"
               className="border border-gray-300 rounded px-2 py-1"
             />
+            <button
+              onClick={handleClearDates}
+              className="ml-4 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+            >
+              Clear
+            </button>
           </div>
           {/* Customer Insights */}
-          <div className="px-4 py-6 sm:px-0">
+          <div className="px-4 py-6 sm:px-0 ">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {/* Total Customers */}
-              <div className="bg-blue-50 p-4 rounded-lg shadow-lg flex items-center">
+              <div className="bg-blue-50 p-4 rounded-lg shadow-md flex items-center">
                 <FaUsers className="text-4xl text-blue-500 mr-4" />
                 <div>
                   <h3 className="text-lg font-semibold text-blue-800 mb-2">
@@ -215,7 +226,7 @@ const Dashboard = () => {
               </div>
 
               {/* Total Reservations */}
-              <div className="bg-green-50 p-4 rounded-lg shadow-lg flex items-center">
+              <div className="bg-green-50 p-4 rounded-lg shadow-md flex items-center ">
                 <FaChartLine className="text-4xl text-green-500 mr-4" />
                 <div>
                   <h3 className="text-lg font-semibold text-green-800 mb-2">
@@ -228,7 +239,7 @@ const Dashboard = () => {
               </div>
 
               {/* Average Stay Duration */}
-              <div className="bg-yellow-50 p-4 rounded-lg shadow-lg flex items-center">
+              <div className="bg-yellow-50 p-4 rounded-lg shadow-md flex items-center ">
                 <FaWarehouse className="text-4xl text-yellow-500 mr-4" />
                 <div>
                   <h3 className="text-lg font-semibold text-yellow-800 mb-2">
@@ -241,7 +252,7 @@ const Dashboard = () => {
               </div>
 
               {/* Total Revenue */}
-              <div className="bg-purple-50 p-4 rounded-lg shadow-lg flex items-center">
+              <div className="bg-purple-50 p-4 rounded-lg shadow-md flex items-center ">
                 <FaMoneyBill className="text-4xl text-purple-500 mr-4" />
                 <div>
                   <h3 className="text-lg font-semibold text-purple-800 mb-2">
@@ -256,7 +267,7 @@ const Dashboard = () => {
           </div>
 
           {/* Reservation Metrics */}
-          <div className="px-4 py-6 sm:px-0">
+          <div className="px-4 py-6 sm:px-0 ">
             <div className="bg-white shadow-lg rounded-lg p-6">
               <h2 className="text-2xl font-semibold mb-6 text-green-800">
                 Reservation Metrics
@@ -332,7 +343,7 @@ const Dashboard = () => {
               </div>
 
               {/* Revenue Trends (Monthly) */}
-              <div className="mt-8">
+              <div className="mt-8" >
                 <h3 className="text-lg font-semibold mb-6 flex items-center">
                   Revenue Trends (Monthly)
                 </h3>
@@ -367,7 +378,7 @@ const Dashboard = () => {
           </div>
 
           {/* Pet Insights */}
-          <div className="px-4 py-6 sm:px-0">
+          <div className="px-4 py-6 sm:px-0 ">
             <div className="bg-white shadow-lg rounded-lg p-6">
               <h2 className="text-2xl font-semibold mb-6 text-yellow-800">
                 Pet Insights
@@ -416,7 +427,7 @@ const Dashboard = () => {
           </div>
 
           {/* Kennel Utilization */}
-          <div className="px-4 py-6 sm:px-0">
+          <div className="px-4 py-6 sm:px-0 ">
             <div className="bg-white shadow-lg rounded-lg p-6">
               <h2 className="text-2xl font-semibold mb-4 text-red-800">
                 Kennel Utilization

@@ -91,7 +91,7 @@ const KennelGrid = () => {
 
   return (
     <div className="p-4">
-      <h2 className="text-2xl font-semibold mb-4">Kennel Status Overview hi</h2>
+      <h2 className="text-2xl font-semibold mb-4">Kennel Status Overview</h2>
 
       {/* Add Kennels and Manage Kennels Buttons */}
       <div className="flex gap-4 mb-4">
@@ -129,19 +129,28 @@ const KennelGrid = () => {
               {kennelsForSet.map((kennel) => (
                 <div
                   key={kennel.id}
-                  className={`p-4 text-center rounded-md transition-colors cursor-pointer ${
+                  className={`p-4 text-center rounded-md transition-colors ${
                     kennel.status === "available"
                       ? "bg-green-500 text-white"
                       : kennel.status === "reserved"
-                      ? "bg-yellow-500 text-white"
+                      ? "bg-yellow-500 text-white cursor-pointer"
                       : kennel.status === "occupied"
-                      ? "bg-red-500 text-white"
+                      ? "bg-red-500 text-white cursor-pointer"
                       : "bg-gray-400 text-white"
                   }`}
                   style={{
                     transition: "background-color 0.3s ease",
+                    cursor:
+                      kennel.status === "reserved" ||
+                      kennel.status === "occupied"
+                        ? "pointer"
+                        : "default",
                   }}
-                  onClick={() => handleKennelClick(kennel)}
+                  onClick={() =>
+                    (kennel.status === "reserved" ||
+                      kennel.status === "occupied") &&
+                    handleKennelClick(kennel)
+                  }
                 >
                   Kennel {kennel.kennel_number}
                 </div>

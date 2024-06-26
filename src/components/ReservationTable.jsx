@@ -157,12 +157,20 @@ const ReservationTable = ({
               </td>
               <td className="whitespace-nowrap px-4 py-2 text-gray-800">
                 {reservation.status === "pending" && (
-                  <button
-                    className="bg-green-500 text-white py-1 px-2 rounded-md hover:bg-green-600"
-                    onClick={() => onConfirm(reservation)}
-                  >
-                    Confirm
-                  </button>
+                  <>
+                    <button
+                      className="bg-green-500 text-white py-1 px-2 rounded-md hover:bg-green-600"
+                      onClick={() => onConfirm(reservation)}
+                    >
+                      Confirm
+                    </button>
+                    <button
+                      className="bg-blue-500 text-white py-1 px-2 rounded-md hover:bg-blue-600 ml-2"
+                      onClick={() => onEdit(reservation)}
+                    >
+                      Edit
+                    </button>
+                  </>
                 )}
                 {reservation.status === "pending" && onCancel && (
                   <button

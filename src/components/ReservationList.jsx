@@ -1,9 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { supabase } from "../supabase";
 import ReservationFilter from "./ReservationFilter";
 import ReservationTable from "./ReservationTable";
 import ReservationEditModal from "./ReservationEditModal";
 import BillGenerationModal from "./BillGenerationModal";
+import { toast, ToastContainer } from "react-toastify";
+import 'react-toastify/dist/ReactToastify.css';
 
 const ReservationList = () => {
   const [reservations, setReservations] = useState([]);
@@ -11,6 +13,7 @@ const ReservationList = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStartDate, setFilterStartDate] = useState(null);
   const [filterEndDate, setFilterEndDate] = useState(null);
+  const [filterStatus, setFilterStatus] = useState("");
   const [selectedReservation, setSelectedReservation] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
@@ -32,9 +35,7 @@ const ReservationList = () => {
       }
 
       setReservations(data);
-      setFilteredReservations(
-        data.filter((reservation) => reservation.status !== "canceled")
-      );
+      filterReservations(data);
     } catch (error) {
       console.error("Fetch reservations error:", error.message);
       // Handle error gracefully (e.g., show error message)
@@ -180,52 +181,51 @@ const ReservationList = () => {
   };
 
   const handleDateFilter = (startDate, endDate) => {
-    if (startDate && endDate) {
-      setFilteredReservations(
-        reservations.filter(
-          (reservation) =>
-            new Date(reservation.start_date) >= startDate &&
-            new Date(reservation.end_date) <=
-              endDate.setHours(23, 59, 59, 999) &&
-            reservation.status !== "canceled"
-        )
-      );
-    } else {
-      setFilteredReservations(
-        reservations.filter((reservation) => reservation.status !== "canceled")
-      );
-    }
+    filterReservations(reservations, searchQuery, filterStatus, startDate, endDate);
+  };
+
+  const handleStatusFilterChange = (status) => {
+    filterReservations(reservations, searchQuery, status, filterStartDate, filterEndDate);
   };
 
   const handleSearchChange = (query) => {
     setSearchQuery(query);
-    if (query) {
-      const lowerQuery = query.toLowerCase();
-      const filtered = reservations.filter(
-        (reservation) =>
-          reservation.customers.customer_name.toLowerCase().includes(lowerQuery) &&
-          reservation.status !== "canceled"
-      );
-      setFilteredReservations(filtered);
-    } else {
-      const filtered = reservations.filter(
-        (reservation) => reservation.status !== "canceled"
-      );
-      setFilteredReservations(filtered);
-    }
+    filterReservations(reservations, query, filterStatus, filterStartDate, filterEndDate);
+  };
+
+  const filterReservations = (reservations, query = searchQuery, status = filterStatus, startDate = filterStartDate, endDate = filterEndDate) => {
+    const lowerQuery = query.toLowerCase();
+    const filtered = reservations.filter((reservation) => {
+      const matchesQuery = reservation.customers.customer_name.toLowerCase().includes(lowerQuery);
+      const matchesStatus = status ? reservation.status === status : true;
+      const matchesDate = startDate && endDate ? 
+        new Date(reservation.start_date) >= startDate &&
+        new Date(reservation.end_date) <= endDate.setHours(23, 59, 59, 999) : true;
+      return matchesQuery && matchesStatus && matchesDate && reservation.status !== "canceled";
+    });
+    setFilteredReservations(filtered);
+  };
+
+  const handleCheckoutSuccess = () => {
+    fetchReservations();
+    toast.success("Bill printed and dog checked out from kennel");
   };
 
   return (
     <div>
+      <ToastContainer />
       <h2 className="text-2xl font-bold mb-4">Reservation List</h2>
       <ReservationFilter
         searchQuery={searchQuery}
         filterStartDate={filterStartDate}
         filterEndDate={filterEndDate}
+        filterStatus={filterStatus}
         onSearchChange={handleSearchChange}
         onDateFilter={handleDateFilter}
+        onStatusFilterChange={handleStatusFilterChange}
         setFilterStartDate={setFilterStartDate}
         setFilterEndDate={setFilterEndDate}
+        setFilterStatus={setFilterStatus}
       />
       <ReservationTable
         reservations={filteredReservations}
@@ -257,6 +257,7 @@ const ReservationList = () => {
           isOpen={isCheckoutModalOpen}
           onClose={() => setIsCheckoutModalOpen(false)}
           selectedReservation={selectedReservation}
+          onCheckoutSuccess={handleCheckoutSuccess}
         />
       )}
     </div>

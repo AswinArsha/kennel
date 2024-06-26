@@ -2,7 +2,10 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "../supabase";
 import Modal from "react-modal";
 
-const BillGenerationModal = ({ isOpen, onClose, selectedReservation }) => {
+// Set the app element
+Modal.setAppElement("#root");
+
+const BillGenerationModal = ({ isOpen, onClose, selectedReservation, onCheckoutSuccess }) => {
   const [perDayBill, setPerDayBill] = useState(400);
   const [totalBill, setTotalBill] = useState(0);
   const [daysStayed, setDaysStayed] = useState(0);
@@ -58,6 +61,7 @@ const BillGenerationModal = ({ isOpen, onClose, selectedReservation }) => {
       setTotalBill(value);
     }
   };
+
   const handleCheckout = async () => {
     try {
       // Fetch customer details based on customer_id
@@ -172,7 +176,7 @@ const BillGenerationModal = ({ isOpen, onClose, selectedReservation }) => {
       const { error: feedingDeleteError } = await supabase
         .from("feeding_schedule")
         .delete()
-        .eq("reservation_id", selectedReservation.id);
+        .eq("kennel_id", selectedReservation.kennel_ids);  // Changed from reservation_id to kennel_id
   
       if (feedingDeleteError) {
         throw feedingDeleteError;
@@ -188,13 +192,13 @@ const BillGenerationModal = ({ isOpen, onClose, selectedReservation }) => {
         throw deleteError;
       }
   
-      // Trigger a fetch to update the reservation list
+      // Close the modal and call the onCheckoutSuccess callback
       onClose();
+      onCheckoutSuccess(); // Notify the parent component
     } catch (error) {
       console.error("Error during checkout:", error.message);
     }
   };
-  
 
   return (
     <Modal

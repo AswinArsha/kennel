@@ -1,7 +1,9 @@
-import { useEffect, useState, Fragment } from "react";
+import React, { useEffect, useState, Fragment } from "react";
 import PropTypes from "prop-types";
 import { supabase } from "../supabase";
 import { Dialog, Transition } from "@headlessui/react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 const ReservationEditModal = ({
   selectedReservation,
@@ -55,6 +57,8 @@ const ReservationEditModal = ({
             customer_name: reservationData.customers.customer_name,
             customer_phone: reservationData.customers.customer_phone,
             customer_address: reservationData.customers.customer_address,
+            start_date: new Date(reservationData.start_date),
+            end_date: new Date(reservationData.end_date),
           });
         } else {
           console.error("Error fetching reservation info:", reservationError);
@@ -238,31 +242,25 @@ const ReservationEditModal = ({
               />
             </div>
             <div className="mt-4">
-              <label className="block font-semibold">Start Date</label>
-              <input
-                type="date"
-                className="w-full p-2 border rounded-md"
-                value={reservationInfo.start_date}
-                onChange={(e) =>
-                  setReservationInfo({
-                    ...reservationInfo,
-                    start_date: e.target.value,
-                  })
+              <label className="block font-semibold">Check In</label>
+              <DatePicker
+                selected={reservationInfo.start_date}
+                onChange={(date) =>
+                  setReservationInfo({ ...reservationInfo, start_date: date })
                 }
+                dateFormat="yyyy-MM-dd"
+                className="w-full p-2 border rounded-md"
               />
             </div>
             <div className="mt-4">
-              <label className="block font-semibold">End Date</label>
-              <input
-                type="date"
-                className="w-full p-2 border rounded-md"
-                value={reservationInfo.end_date}
-                onChange={(e) =>
-                  setReservationInfo({
-                    ...reservationInfo,
-                    end_date: e.target.value,
-                  })
+              <label className="block font-semibold">Check Out</label>
+              <DatePicker
+                selected={reservationInfo.end_date}
+                onChange={(date) =>
+                  setReservationInfo({ ...reservationInfo, end_date: date })
                 }
+                dateFormat="yyyy-MM-dd"
+                className="w-full p-2 border rounded-md"
               />
             </div>
             <div className="mt-4">
