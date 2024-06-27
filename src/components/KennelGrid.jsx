@@ -23,6 +23,7 @@ const KennelGrid = () => {
       const { data, error } = await supabase
         .from("kennels")
         .select("*")
+        .order("id", { ascending: true }) // Order by id
         .order("set_name", { ascending: true })
         .order("kennel_number", { ascending: true });
 

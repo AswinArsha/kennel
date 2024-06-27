@@ -22,10 +22,13 @@ import {
   FaUsers,
   FaMoneyBill,
   FaChartLine,
-  FaDog,
   FaWarehouse,
   FaPercentage,
+  FaChevronLeft,
+  FaChevronRight,
 } from "react-icons/fa";
+
+const ITEMS_PER_PAGE = 5;
 
 const Dashboard = () => {
   const [data, setData] = useState([]);
@@ -35,6 +38,8 @@ const Dashboard = () => {
   const [customerNamesById, setCustomerNamesById] = useState({});
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
+  const [currentCustomerPage, setCurrentCustomerPage] = useState(0);
+  const [currentBreedPage, setCurrentBreedPage] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -139,6 +144,11 @@ const Dashboard = () => {
     return acc;
   }, {});
 
+  // Sort Data in Descending Order
+  const sortedCustomerReservationFrequency = Object.entries(customerReservationFrequency).sort((a, b) => b[1] - a[1]);
+  const sortedPopularBreeds = Object.entries(popularBreeds).sort((a, b) => b[1] - a[1]);
+  const sortedPetServicesUtilization = Object.entries(petServicesUtilization).sort((a, b) => b[1] - a[1]);
+
   // Kennel Utilization
   const totalKennels = kennels.length;
   const occupiedKennels = kennels.filter(
@@ -166,6 +176,24 @@ const Dashboard = () => {
   const handleClearDates = () => {
     setStartDate(null);
     setEndDate(null);
+  };
+
+  const getPaginatedData = (data, currentPage, itemsPerPage) => {
+    const start = currentPage * itemsPerPage;
+    const end = start + itemsPerPage;
+    return data.slice(start, end);
+  };
+
+  const handleNextPage = (setCurrentPage, currentPage, data, itemsPerPage) => {
+    if (currentPage < Math.ceil(data.length / itemsPerPage) - 1) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const handlePrevPage = (setCurrentPage, currentPage) => {
+    if (currentPage > 0) {
+      setCurrentPage(currentPage - 1);
+    }
   };
 
   return (
@@ -281,11 +309,15 @@ const Dashboard = () => {
                   <ResponsiveContainer width="100%" height={300}>
                     <BarChart
                       key={`${startDate}-${endDate}`}
-                      data={Object.entries(customerReservationFrequency).map(
-                        ([customerName, frequency]) => ({
-                          customerName,
-                          frequency,
-                        })
+                      data={getPaginatedData(
+                        sortedCustomerReservationFrequency.map(
+                          ([customerName, frequency]) => ({
+                            customerName,
+                            frequency,
+                          })
+                        ),
+                        currentCustomerPage,
+                        ITEMS_PER_PAGE
                       )}
                     >
                       <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
@@ -300,6 +332,54 @@ const Dashboard = () => {
                       />
                     </BarChart>
                   </ResponsiveContainer>
+                  <div className="flex justify-center mt-2">
+                    <button
+                      onClick={() =>
+                        handlePrevPage(
+                          setCurrentCustomerPage,
+                          currentCustomerPage
+                        )
+                      }
+                      disabled={currentCustomerPage === 0}
+                      className={`${
+                        currentCustomerPage === 0
+                          ? "bg-gray-300 cursor-not-allowed"
+                          : "bg-blue-500 hover:bg-blue-600"
+                      } text-white font-bold py-2 px-4 rounded`}
+                    >
+                      <FaChevronLeft />
+                    </button>
+                    <button
+                      onClick={() =>
+                        handleNextPage(
+                          setCurrentCustomerPage,
+                          currentCustomerPage,
+                          sortedCustomerReservationFrequency,
+                          ITEMS_PER_PAGE
+                        )
+                      }
+                      disabled={
+                        currentCustomerPage >=
+                        Math.ceil(
+                          sortedCustomerReservationFrequency.length /
+                            ITEMS_PER_PAGE
+                        ) -
+                          1
+                      }
+                      className={`ml-2 ${
+                        currentCustomerPage >=
+                        Math.ceil(
+                          sortedCustomerReservationFrequency.length /
+                            ITEMS_PER_PAGE
+                        ) -
+                          1
+                          ? "bg-gray-300 cursor-not-allowed"
+                          : "bg-blue-500 hover:bg-blue-600"
+                      } text-white font-bold py-2 px-4 rounded`}
+                    >
+                      <FaChevronRight />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Reservation Status Breakdown */}
@@ -343,7 +423,7 @@ const Dashboard = () => {
               </div>
 
               {/* Revenue Trends (Monthly) */}
-              <div className="mt-8" >
+              <div className="mt-8">
                 <h3 className="text-lg font-semibold mb-6 flex items-center">
                   Revenue Trends (Monthly)
                 </h3>
@@ -390,8 +470,13 @@ const Dashboard = () => {
                   </h3>
                   <ResponsiveContainer width="100%" height={300}>
                     <BarChart
-                      data={Object.entries(popularBreeds).map(
-                        ([breed, count]) => ({ breed, count })
+                      data={getPaginatedData(
+                        sortedPopularBreeds.map(([breed, count]) => ({
+                          breed,
+                          count,
+                        })),
+                        currentBreedPage,
+                        ITEMS_PER_PAGE
                       )}
                     >
                       <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
@@ -402,6 +487,45 @@ const Dashboard = () => {
                       <Bar dataKey="count" fill="#F59E0B" name="Count" />
                     </BarChart>
                   </ResponsiveContainer>
+                  <div className="flex justify-center mt-2">
+                    <button
+                      onClick={() =>
+                        handlePrevPage(setCurrentBreedPage, currentBreedPage)
+                      }
+                      disabled={currentBreedPage === 0}
+                      className={`${
+                        currentBreedPage === 0
+                          ? "bg-gray-300 cursor-not-allowed"
+                          : "bg-yellow-500 hover:bg-yellow-600"
+                      } text-white font-bold py-2 px-4 rounded`}
+                    >
+                      <FaChevronLeft />
+                    </button>
+                    <button
+                      onClick={() =>
+                        handleNextPage(
+                          setCurrentBreedPage,
+                          currentBreedPage,
+                          sortedPopularBreeds,
+                          ITEMS_PER_PAGE
+                        )
+                      }
+                      disabled={
+                        currentBreedPage >=
+                        Math.ceil(sortedPopularBreeds.length / ITEMS_PER_PAGE) -
+                          1
+                      }
+                      className={`ml-2 ${
+                        currentBreedPage >=
+                        Math.ceil(sortedPopularBreeds.length / ITEMS_PER_PAGE) -
+                          1
+                          ? "bg-gray-300 cursor-not-allowed"
+                          : "bg-yellow-500 hover:bg-yellow-600"
+                      } text-white font-bold py-2 px-4 rounded`}
+                    >
+                      <FaChevronRight />
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold mb-4 flex items-center">
@@ -409,7 +533,7 @@ const Dashboard = () => {
                   </h3>
                   <ResponsiveContainer width="100%" height={300}>
                     <BarChart
-                      data={Object.entries(petServicesUtilization).map(
+                      data={sortedPetServicesUtilization.map(
                         ([service, count]) => ({ service, count })
                       )}
                     >
