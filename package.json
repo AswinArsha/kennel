@@ -22,6 +22,7 @@
     "axios": "^1.7.2",
     "chart.js": "^4.4.3",
     "dayjs": "^1.11.11",
+    "dotenv": "^16.4.5",
     "jspdf": "^2.5.1",
     "jspdf-autotable": "^3.8.2",
     "moment": "^2.30.1",

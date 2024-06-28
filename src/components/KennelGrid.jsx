@@ -92,7 +92,7 @@ const KennelGrid = () => {
 
   return (
     <div className="p-4">
-      <h2 className="text-2xl font-semibold mb-4">Kennel Status Overview</h2>
+      <h2 className="text-2xl font-semibold mb-4">Kennel </h2>
 
       {/* Add Kennels and Manage Kennels Buttons */}
       <div className="flex gap-4 mb-4">
