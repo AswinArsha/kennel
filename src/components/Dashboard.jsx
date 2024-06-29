@@ -155,10 +155,6 @@ const Dashboard = () => {
     (kennel) => kennel.status !== "available"
   ).length;
   const occupancyRate = (occupiedKennels / totalKennels) * 100;
-  const canceledReservations = reservations.filter(
-    (reservation) => reservation.status === "canceled"
-  ).length;
-  const cancellationRate = (canceledReservations / totalReservations) * 100;
 
   const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#AF19FF"];
 
@@ -296,7 +292,7 @@ const Dashboard = () => {
 
           {/* Reservation Metrics */}
           <div className="px-4 py-6 sm:px-0 ">
-            <div className="bg-white shadow-lg rounded-lg p-6">
+            <div className="bg-white shadow-md rounded-lg p-6">
               <h2 className="text-2xl font-semibold mb-6 text-green-800">
                 Reservation Metrics
               </h2>
@@ -459,7 +455,7 @@ const Dashboard = () => {
 
           {/* Pet Insights */}
           <div className="px-4 py-6 sm:px-0 ">
-            <div className="bg-white shadow-lg rounded-lg p-6">
+            <div className="bg-white shadow-md rounded-lg p-6">
               <h2 className="text-2xl font-semibold mb-6 text-yellow-800">
                 Pet Insights
               </h2>
@@ -552,32 +548,25 @@ const Dashboard = () => {
 
           {/* Kennel Utilization */}
           <div className="px-4 py-6 sm:px-0 ">
-            <div className="bg-white shadow-lg rounded-lg p-6">
+            <div className="bg-white shadow-md rounded-lg p-6">
               <h2 className="text-2xl font-semibold mb-4 text-red-800">
                 Kennel Utilization
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Occupied Kennels */}
                 <div className="bg-red-50 p-4 rounded-lg shadow">
                   <h3 className="text-lg font-semibold mb-2 flex items-center">
-                    <FaWarehouse className="mr-2 text-red-500" /> Total Kennels
+                    <FaWarehouse className="mr-2 text-red-500" /> Occupied Kennels
                   </h3>
                   <p className="text-4xl font-bold text-red-600">
-                    {totalKennels}
+                    {occupiedKennels} / {totalKennels}
                   </p>
                 </div>
+
+                {/* Occupancy Rate */}
                 <div className="bg-red-50 p-4 rounded-lg shadow">
                   <h3 className="text-lg font-semibold mb-2 flex items-center">
-                    <FaWarehouse className="mr-2 text-red-500" /> Occupied
-                    Kennels
-                  </h3>
-                  <p className="text-4xl font-bold text-red-600">
-                    {occupiedKennels}
-                  </p>
-                </div>
-                <div className="bg-red-50 p-4 rounded-lg shadow">
-                  <h3 className="text-lg font-semibold mb-2 flex items-center">
-                    <FaPercentage className="mr-2 text-red-500" /> Occupancy
-                    Rate
+                    <FaPercentage className="mr-2 text-red-500" /> Occupancy Rate
                   </h3>
                   <div className="flex items-center">
                     <div className="w-full bg-gray-200 rounded-full h-4">
@@ -588,23 +577,6 @@ const Dashboard = () => {
                     </div>
                     <span className="ml-4 text-red-600 font-semibold">
                       {occupancyRate.toFixed(2)}%
-                    </span>
-                  </div>
-                </div>
-                <div className="bg-red-50 p-4 rounded-lg shadow">
-                  <h3 className="text-lg font-semibold mb-2 flex items-center">
-                    <FaPercentage className="mr-2 text-red-500" /> Cancellation
-                    Rate
-                  </h3>
-                  <div className="flex items-center">
-                    <div className="w-full bg-gray-200 rounded-full h-4">
-                      <div
-                        className="bg-red-600 h-4 rounded-full transition-all duration-500 ease-in-out"
-                        style={{ width: `${cancellationRate}%` }}
-                      ></div>
-                    </div>
-                    <span className="ml-4 text-red-600 font-semibold">
-                      {cancellationRate.toFixed(2)}%
                     </span>
                   </div>
                 </div>

@@ -23,7 +23,7 @@ const KennelGrid = () => {
       const { data, error } = await supabase
         .from("kennels")
         .select("*")
-        .order("id", { ascending: true }) // Order by id
+        .order("created_at", { ascending: true }) // Order by creation time
         .order("set_name", { ascending: true })
         .order("kennel_number", { ascending: true });
 
@@ -92,7 +92,7 @@ const KennelGrid = () => {
 
   return (
     <div className="p-4">
-      <h2 className="text-2xl font-semibold mb-4">Kennel </h2>
+      <h2 className="text-2xl font-semibold mb-4">Kennel Status Overview</h2>
 
       {/* Add Kennels and Manage Kennels Buttons */}
       <div className="flex gap-4 mb-4">
