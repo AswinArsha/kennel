@@ -1,21 +1,23 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { supabase } from "../supabase";
+import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import AddKennelsModal from "./AddKennelsModal";
 import EditSetsModal from "./EditSetsModal";
 import ManageKennelsModal from "./ManageKennelsModal";
 import CustomerDetailDialog from "./CustomerDetailDialog";
 import { MdEdit } from "react-icons/md";
+import { toast, ToastContainer } from "react-toastify";
+import 'react-toastify/dist/ReactToastify.css';
+import { updateKennelStatus, updatePetInformation, updateReservation, updateFeedingSchedule } from './kennelUtils';
 
 const KennelGrid = () => {
   const [kennels, setKennels] = useState([]);
   const [isAddKennelsModalOpen, setIsAddKennelsModalOpen] = useState(false);
-  const [isManageKennelsModalOpen, setIsManageKennelsModalOpen] =
-    useState(false);
+  const [isManageKennelsModalOpen, setIsManageKennelsModalOpen] = useState(false);
   const [isEditSetsModalOpen, setIsEditSetsModalOpen] = useState(false);
   const [selectedSet, setSelectedSet] = useState(null);
-  const [selectedKennel, setSelectedKennel] = useState(null); // State for selected kennel
-  const [isCustomerDetailDialogOpen, setIsCustomerDetailDialogOpen] =
-    useState(false);
+  const [selectedKennel, setSelectedKennel] = useState(null);
+  const [isCustomerDetailDialogOpen, setIsCustomerDetailDialogOpen] = useState(false);
 
   // Fetch kennels data
   const fetchKennels = async () => {
@@ -23,7 +25,7 @@ const KennelGrid = () => {
       const { data, error } = await supabase
         .from("kennels")
         .select("*")
-        .order("created_at", { ascending: true }) // Order by creation time
+        .order("created_at", { ascending: true })
         .order("set_name", { ascending: true })
         .order("kennel_number", { ascending: true });
 
@@ -34,6 +36,7 @@ const KennelGrid = () => {
       }
     } catch (error) {
       console.error("Error fetching kennels:", error.message);
+      toast.error("Failed to fetch kennels. Please try again.");
     }
   };
 
@@ -80,6 +83,39 @@ const KennelGrid = () => {
     }
   };
 
+  const onDragEnd = async (result) => {
+    if (!result.destination) {
+      return;
+    }
+
+    const sourceId = parseInt(result.source.droppableId);
+    const destinationId = parseInt(result.destination.droppableId);
+
+    if (sourceId === destinationId) {
+      return;
+    }
+
+    const sourceKennel = kennels.find((kennel) => kennel.id === sourceId);
+    const destinationKennel = kennels.find((kennel) => kennel.id === destinationId);
+
+    if (sourceKennel.status === "available" || destinationKennel.status !== "available") {
+      return;
+    }
+
+    try {
+      await updateKennelStatus(sourceId, destinationId);
+      await updatePetInformation(sourceId, destinationId);
+      await updateReservation(sourceId, destinationId);
+      await updateFeedingSchedule(sourceId, destinationId);
+
+      fetchKennels();
+      toast.success(`Kennel ${sourceKennel.kennel_number} status changed to ${destinationKennel.status}`);
+    } catch (error) {
+      console.error("Error updating kennel status:", error.message);
+      toast.error("Error updating kennel status. Please try again.");
+    }
+  };
+
   // Group kennels by set names
   const groupedKennels = kennels.reduce((acc, kennel) => {
     const setName = kennel.set_name;
@@ -91,113 +127,146 @@ const KennelGrid = () => {
   }, {});
 
   return (
-    <div className="p-4">
-      <h2 className="text-2xl font-semibold mb-4">Kennel Status Overview</h2>
+    <DragDropContext onDragEnd={onDragEnd}>
+      <div className="p-4">
+        <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} />
+        <h2 className="text-2xl font-semibold mb-4">Kennel Status Overview</h2>
 
-      {/* Add Kennels and Manage Kennels Buttons */}
-      <div className="flex gap-4 mb-4">
-        <button
-          className="bg-blue-500 text-white px-4 py-2 rounded-md"
-          onClick={openAddKennelsModal}
-        >
-          Add Kennels
-        </button>
-        <button
-          className="bg-blue-500 text-white px-4 py-2 rounded-md"
-          onClick={openManageKennelsModal}
-        >
-          Manage Kennels
-        </button>
-      </div>
+        {/* Add Kennels and Manage Kennels Buttons */}
+        <div className="flex gap-4 mb-4">
+          <button
+            className="bg-blue-500 text-white px-4 py-2 rounded-md"
+            onClick={openAddKennelsModal}
+            title="Click to add new kennels"
+          >
+            Add Kennels
+          </button>
+          <button
+            className="bg-blue-500 text-white px-4 py-2 rounded-md"
+            onClick={openManageKennelsModal}
+            title="Click to manage existing kennels"
+          >
+            Manage Kennels
+          </button>
+        </div>
 
-      {/* Display Kennels */}
-      {Object.entries(groupedKennels).map(
-        ([setName, kennelsForSet], index, array) => (
-          <div key={index}>
+        {/* Display Kennels */}
+        {Object.entries(groupedKennels).map(([setName, kennelsForSet], index) => (
+          <div key={index} className="border-b-2 border-gray-200 mb-4 ">
             {/* Set Name */}
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-lg font-semibold">{setName}</h3>
-              <button
-                onClick={() => openEditSetsModal({ name: setName })}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <MdEdit />
-              </button>
+            <div className="flex items-center mb-2">
+              <h3 className="text-lg mr-1 font-semibold">{setName}</h3>
+              {setName !== "Maintenance" && (
+                <button
+                  onClick={() => openEditSetsModal({ name: setName })}
+                  className="text-gray-500 hover:text-gray-700"
+                  title="Edit set"
+                >
+                  <MdEdit />
+                </button>
+              )}
             </div>
 
             {/* Kennels in the Set */}
             <div className="grid grid-cols-5 md:grid-cols-10 gap-4 mb-4">
               {kennelsForSet.map((kennel) => (
-                <div
-                  key={kennel.id}
-                  className={`p-4 text-center rounded-md transition-colors ${
-                    kennel.status === "available"
-                      ? "bg-green-500 text-white"
-                      : kennel.status === "reserved"
-                      ? "bg-yellow-500 text-white cursor-pointer"
-                      : kennel.status === "occupied"
-                      ? "bg-red-500 text-white cursor-pointer"
-                      : "bg-gray-400 text-white"
-                  }`}
-                  style={{
-                    transition: "background-color 0.3s ease",
-                    cursor:
-                      kennel.status === "reserved" ||
-                      kennel.status === "occupied"
-                        ? "pointer"
-                        : "default",
-                  }}
-                  onClick={() =>
-                    (kennel.status === "reserved" ||
-                      kennel.status === "occupied") &&
-                    handleKennelClick(kennel)
-                  }
-                >
-                  Kennel {kennel.kennel_number}
-                </div>
+                <Droppable key={kennel.id} droppableId={kennel.id.toString()} isDropDisabled={kennel.status !== "available"}>
+                  {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className={`p-4 text-center rounded-md transition-colors ${
+                        snapshot.isDraggingOver
+                          ? "bg-blue-200"
+                          : kennel.status === "available"
+                          ? "bg-green-500 text-white"
+                          : kennel.status === "reserved"
+                          ? "bg-yellow-500 text-white cursor-pointer"
+                          : kennel.status === "occupied"
+                          ? "bg-red-500 text-white cursor-pointer"
+                          : "bg-gray-400 text-white"
+                      }`}
+                      style={{
+                        transition: "background-color 0.3s ease",
+                        cursor:
+                          kennel.status === "reserved" || kennel.status === "occupied"
+                            ? "pointer"
+                            : "default",
+                      }}
+                      onClick={() =>
+                        (kennel.status === "reserved" || kennel.status === "occupied") &&
+                        handleKennelClick(kennel)
+                      }
+                    >
+                      <Draggable draggableId={kennel.id.toString()} index={kennel.kennel_number} isDragDisabled={kennel.status === "available"}>
+                        {(provided, snapshot) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            style={{
+                              ...provided.draggableProps.style,
+                              cursor: kennel.status === "available" ? "default" : "grab",
+                              background: snapshot.isDragging ? "rgba(0,0,0,0.1)" : "inherit",
+                              borderRadius: "8px",
+                              padding: "8px",
+                              boxShadow: snapshot.isDragging ? "0 4px 8px rgba(0, 0, 0, 0.2)" : "none",
+                            }}
+                          >
+                            {kennel.status !== "available" ? (
+                              <div>
+                                Kennel {kennel.kennel_number}
+                              </div>
+                            ) : (
+                              `Kennel ${kennel.kennel_number}`
+                            )}
+                          </div>
+                        )}
+                      </Draggable>
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
               ))}
             </div>
-
-            {/* Horizontal Line */}
-            {index !== array.length - 1 && <hr className="my-4" />}
           </div>
-        )
-      )}
+        ))}
 
-      {/* Add Kennels Modal */}
-      {isAddKennelsModalOpen && (
-        <AddKennelsModal
-          isOpen={isAddKennelsModalOpen}
-          onClose={() => setIsAddKennelsModalOpen(false)}
-        />
-      )}
+        {/* Add Kennels Modal */}
+        {isAddKennelsModalOpen && (
+          <AddKennelsModal
+            isOpen={isAddKennelsModalOpen}
+            onClose={() => setIsAddKennelsModalOpen(false)}
+          />
+        )}
 
-      {/* Manage Kennels Modal */}
-      {isManageKennelsModalOpen && (
-        <ManageKennelsModal
-          isOpen={isManageKennelsModalOpen}
-          onClose={() => setIsManageKennelsModalOpen(false)}
-        />
-      )}
+        {/* Manage Kennels Modal */}
+        {isManageKennelsModalOpen && (
+          <ManageKennelsModal
+            isOpen={isManageKennelsModalOpen}
+            onClose={() => setIsManageKennelsModalOpen(false)}
+          />
+        )}
 
-      {/* Edit Sets Modal */}
-      {isEditSetsModalOpen && (
-        <EditSetsModal
-          isOpen={isEditSetsModalOpen}
-          onClose={() => setIsEditSetsModalOpen(false)}
-          setToEdit={selectedSet}
-        />
-      )}
+        {/* Edit Sets Modal */}
+        {isEditSetsModalOpen && (
+          <EditSetsModal
+            isOpen={isEditSetsModalOpen}
+            onClose={() => setIsEditSetsModalOpen(false)}
+            setToEdit={selectedSet}
+          />
+        )}
 
-      {/* Customer Detail Dialog */}
-      {isCustomerDetailDialogOpen && (
-        <CustomerDetailDialog
-          isOpen={isCustomerDetailDialogOpen}
-          onClose={() => setIsCustomerDetailDialogOpen(false)}
-          customer={selectedKennel}
-        />
-      )}
-    </div>
+        {/* Customer Detail Dialog */}
+        {isCustomerDetailDialogOpen && (
+          <CustomerDetailDialog
+            isOpen={isCustomerDetailDialogOpen}
+            onClose={() => setIsCustomerDetailDialogOpen(false)}
+            customer={selectedKennel}
+          />
+        )}
+      </div>
+    </DragDropContext>
   );
 };
 

@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../supabase";
 import AddKennelsToSetModal from "./AddKennelsToSetModal";
+import { MdAdd, MdClose } from "react-icons/md";
+import { toast } from "react-toastify";
 
 const EditSetsModal = ({ isOpen, onClose, setToEdit }) => {
   const [editedSetName, setEditedSetName] = useState("");
-  const [kennels, setKennels] = useState([]);
+  const [editedKennels, setEditedKennels] = useState([]);
+  const [initialKennels, setInitialKennels] = useState([]);
   const [error, setError] = useState("");
   const [isAddKennelsModalOpen, setIsAddKennelsModalOpen] = useState(false);
 
@@ -21,7 +24,8 @@ const EditSetsModal = ({ isOpen, onClose, setToEdit }) => {
         if (error) {
           console.error("Error fetching kennels:", error);
         } else {
-          setKennels(data);
+          setEditedKennels(data);
+          setInitialKennels(data); // Store initial kennels to compare later
         }
       };
 
@@ -33,27 +37,12 @@ const EditSetsModal = ({ isOpen, onClose, setToEdit }) => {
     setIsAddKennelsModalOpen(true);
   };
 
-  const handleRemoveKennel = async (kennel_id) => {
-    try {
-      const { error } = await supabase
-        .from("kennels")
-        .update({ set_name: 'Maintenance' }) // Update set_name to 'Maintenance'
-        .eq("id", kennel_id);
-  
-      if (error) {
-        throw error;
-      }
-  
-      // Filter out the removed kennel from the state
-      setKennels(kennels.filter((kennel) => kennel.id !== kennel_id));
-    } catch (error) {
-      console.error("Error removing kennel:", error.message);
-      setError("An error occurred while removing the kennel. Please try again.");
-    }
+  const handleRemoveKennel = (kennel_id) => {
+    setEditedKennels(editedKennels.filter((kennel) => kennel.id !== kennel_id));
   };
 
   const handleAddKennelsToSet = (addedKennels) => {
-    setKennels((prevKennels) => [...prevKennels, ...addedKennels]);
+    setEditedKennels((prevKennels) => [...prevKennels, ...addedKennels]);
   };
 
   const handleSubmit = async (e) => {
@@ -64,13 +53,13 @@ const EditSetsModal = ({ isOpen, onClose, setToEdit }) => {
       return;
     }
 
-    if (kennels.length === 0) {
+    if (editedKennels.length === 0) {
       setError("At least one kennel is required.");
       return;
     }
 
     try {
-      const updates = kennels.map((kennel) => ({
+      const updates = editedKennels.map((kennel) => ({
         ...kennel,
         set_name: editedSetName,
       }));
@@ -83,10 +72,27 @@ const EditSetsModal = ({ isOpen, onClose, setToEdit }) => {
         throw updateError;
       }
 
+      // Update kennels removed from the set
+      const removedKennels = initialKennels.filter(
+        (initialKennel) => !editedKennels.some((editedKennel) => editedKennel.id === initialKennel.id)
+      );
+
+      if (removedKennels.length > 0) {
+        const { error: removeError } = await supabase
+          .from("kennels")
+          .update({ set_name: "Maintenance" })
+          .in("id", removedKennels.map((kennel) => kennel.id));
+
+        if (removeError) {
+          throw removeError;
+        }
+      }
+
       setEditedSetName("");
-      setKennels([]);
+      setEditedKennels([]);
       setError("");
       onClose();
+      toast.success("Set updated successfully!");
     } catch (error) {
       console.error("Error updating set:", error.message);
       setError("An error occurred while updating the set. Please try again.");
@@ -95,70 +101,58 @@ const EditSetsModal = ({ isOpen, onClose, setToEdit }) => {
 
   return (
     <div
-      className={`fixed inset-0 z-10 overflow-y-auto ${
-        isOpen ? "block" : "hidden"
-      }`}
+      className={`fixed inset-0 z-10 overflow-y-auto ${isOpen ? "block" : "hidden"}`}
+      aria-labelledby="modal-title"
+      role="dialog"
+      aria-modal="true"
     >
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+      <div className="flex items-center justify-center min-h-screen px-4 pb-20 text-center sm:block sm:p-0">
         <div className="fixed inset-0 transition-opacity">
-          <div
-            className="absolute inset-0 bg-gray-500 opacity-75"
-            onClick={onClose}
-          ></div>
+          <div className="absolute inset-0 bg-gray-500 opacity-75" onClick={onClose}></div>
         </div>
-        <span className="hidden sm:inline-block sm:align-middle sm:h-screen">
-          &#8203;
-        </span>
+        <span className="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
         <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
           <form onSubmit={handleSubmit}>
             <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
               <div className="sm:flex sm:items-start">
                 <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                  <h3
-                    className="text-lg leading-6 font-medium text-gray-900 mb-4"
-                    id="modal-headline"
-                  >
+                  <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4" id="modal-title">
                     Edit Set
                   </h3>
                   <div className="mb-4">
-                    <label
-                      htmlFor="set-name"
-                      className="block text-sm font-medium text-gray-700"
-                    >
+                    <label htmlFor="set-name" className="block text-sm font-medium text-gray-700">
                       Set Name
                     </label>
                     <input
                       type="text"
                       id="set-name"
-                      className="mt-1 p-2 border rounded-md w-full"
+                      className="mt-1 p-2 border rounded-md w-full focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Enter set name"
                       value={editedSetName}
                       onChange={(e) => setEditedSetName(e.target.value)}
                     />
                   </div>
                   {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
                   <div className="grid grid-cols-3 gap-4">
-                    {kennels.map((kennel) => (
-                      <div
-                        key={kennel.id}
-                        className="relative border p-4 rounded-md"
-                      >
+                    {editedKennels.map((kennel) => (
+                      <div key={kennel.id} className="relative border p-4 rounded-md bg-gray-100">
                         <span
                           className="absolute top-0 right-0 p-1 text-red-600 cursor-pointer"
                           onClick={() => handleRemoveKennel(kennel.id)}
+                          title="Remove kennel"
                         >
-                          &times;
+                          <MdClose />
                         </span>
-                        <p className="text-center">
-                          Kennel {kennel.kennel_number}
-                        </p>
+                        <p className="text-center">Kennel {kennel.kennel_number}</p>
                       </div>
                     ))}
                     <button
                       type="button"
                       className="border-dashed border-2 border-gray-300 text-gray-400 flex items-center justify-center p-4 rounded-md"
                       onClick={handleAddKennel}
+                      title="Add kennels"
                     >
-                      <span className="text-2xl">+</span>
+                      <MdAdd className="text-2xl" />
                     </button>
                   </div>
                 </div>
