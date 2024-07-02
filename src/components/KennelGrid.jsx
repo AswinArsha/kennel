@@ -7,8 +7,13 @@ import ManageKennelsModal from "./ManageKennelsModal";
 import CustomerDetailDialog from "./CustomerDetailDialog";
 import { MdEdit } from "react-icons/md";
 import { toast, ToastContainer } from "react-toastify";
-import 'react-toastify/dist/ReactToastify.css';
-import { updateKennelStatus, updatePetInformation, updateReservation, updateFeedingSchedule } from './kennelUtils';
+import "react-toastify/dist/ReactToastify.css";
+import {
+  updateKennelStatus,
+  updatePetInformation,
+  updateReservation,
+  updateFeedingSchedule,
+} from "./kennelUtils";
 
 const KennelGrid = () => {
   const [kennels, setKennels] = useState([]);
@@ -36,7 +41,6 @@ const KennelGrid = () => {
       }
     } catch (error) {
       console.error("Error fetching kennels:", error.message);
-      toast.error("Failed to fetch kennels. Please try again.");
     }
   };
 
@@ -96,9 +100,14 @@ const KennelGrid = () => {
     }
 
     const sourceKennel = kennels.find((kennel) => kennel.id === sourceId);
-    const destinationKennel = kennels.find((kennel) => kennel.id === destinationId);
+    const destinationKennel = kennels.find(
+      (kennel) => kennel.id === destinationId
+    );
 
-    if (sourceKennel.status === "available" || destinationKennel.status !== "available") {
+    if (
+      sourceKennel.status === "available" ||
+      destinationKennel.status !== "available"
+    ) {
       return;
     }
 
@@ -109,14 +118,16 @@ const KennelGrid = () => {
       await updateFeedingSchedule(sourceId, destinationId);
 
       fetchKennels();
-      toast.success(`Kennel ${sourceKennel.kennel_number} status changed to ${destinationKennel.status}`);
+      toast.success(
+        `Kennel ${destinationKennel.kennel_number} status changed to ${sourceKennel.status}`
+      );
     } catch (error) {
       console.error("Error updating kennel status:", error.message);
       toast.error("Error updating kennel status. Please try again.");
     }
   };
 
-  // Group kennels by set names
+  // Group kennels by set names and sort them
   const groupedKennels = kennels.reduce((acc, kennel) => {
     const setName = kennel.set_name;
     if (!acc[setName]) {
@@ -126,12 +137,23 @@ const KennelGrid = () => {
     return acc;
   }, {});
 
+  // Sort sets by creation order and kennels within each set by number
+  const sortedSets = Object.keys(groupedKennels).sort((a, b) => {
+    const setA = kennels.find((kennel) => kennel.set_name === a);
+    const setB = kennels.find((kennel) => kennel.set_name === b);
+    return new Date(setA.created_at) - new Date(setB.created_at);
+  });
+
   return (
     <DragDropContext onDragEnd={onDragEnd}>
       <div className="p-4">
-        <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} />
+        <ToastContainer
+          position="top-right"
+          autoClose={2000}
+          hideProgressBar={false}
+        />
         <h2 className="text-2xl font-semibold mb-4">Kennel Status Overview</h2>
-
+       
         {/* Add Kennels and Manage Kennels Buttons */}
         <div className="flex gap-4 mb-4">
           <button
@@ -151,7 +173,7 @@ const KennelGrid = () => {
         </div>
 
         {/* Display Kennels */}
-        {Object.entries(groupedKennels).map(([setName, kennelsForSet], index) => (
+        {sortedSets.map((setName, index) => (
           <div key={index} className="border-b-2 border-gray-200 mb-4 ">
             {/* Set Name */}
             <div className="flex items-center mb-2">
@@ -169,8 +191,12 @@ const KennelGrid = () => {
 
             {/* Kennels in the Set */}
             <div className="grid grid-cols-5 md:grid-cols-10 gap-4 mb-4">
-              {kennelsForSet.map((kennel) => (
-                <Droppable key={kennel.id} droppableId={kennel.id.toString()} isDropDisabled={kennel.status !== "available"}>
+              {groupedKennels[setName].map((kennel) => (
+                <Droppable
+                  key={kennel.id}
+                  droppableId={kennel.id.toString()}
+                  isDropDisabled={kennel.status !== "available" || setName === "Maintenance"}
+                >
                   {(provided, snapshot) => (
                     <div
                       ref={provided.innerRef}
@@ -178,6 +204,8 @@ const KennelGrid = () => {
                       className={`p-4 text-center rounded-md transition-colors ${
                         snapshot.isDraggingOver
                           ? "bg-blue-200"
+                          : setName === "Maintenance"
+                          ? "bg-gray-400 text-white"
                           : kennel.status === "available"
                           ? "bg-green-500 text-white"
                           : kennel.status === "reserved"
@@ -189,16 +217,22 @@ const KennelGrid = () => {
                       style={{
                         transition: "background-color 0.3s ease",
                         cursor:
-                          kennel.status === "reserved" || kennel.status === "occupied"
+                          kennel.status === "reserved" ||
+                          kennel.status === "occupied"
                             ? "pointer"
                             : "default",
                       }}
                       onClick={() =>
-                        (kennel.status === "reserved" || kennel.status === "occupied") &&
+                        (kennel.status === "reserved" ||
+                          kennel.status === "occupied") &&
                         handleKennelClick(kennel)
                       }
                     >
-                      <Draggable draggableId={kennel.id.toString()} index={kennel.kennel_number} isDragDisabled={kennel.status === "available"}>
+                      <Draggable
+                        draggableId={kennel.id.toString()}
+                        index={kennel.kennel_number}
+                        isDragDisabled={kennel.status === "available" || setName === "Maintenance"}
+                      >
                         {(provided, snapshot) => (
                           <div
                             ref={provided.innerRef}
@@ -206,17 +240,23 @@ const KennelGrid = () => {
                             {...provided.dragHandleProps}
                             style={{
                               ...provided.draggableProps.style,
-                              cursor: kennel.status === "available" ? "default" : "grab",
-                              background: snapshot.isDragging ? "rgba(0,0,0,0.1)" : "inherit",
+                              cursor:
+                                kennel.status === "available" ||
+                                setName === "Maintenance"
+                                  ? "default"
+                                  : "grab",
+                              background: snapshot.isDragging
+                                ? "rgba(0,0,0,0.1)"
+                                : "inherit",
                               borderRadius: "8px",
                               padding: "8px",
-                              boxShadow: snapshot.isDragging ? "0 4px 8px rgba(0, 0, 0, 0.2)" : "none",
+                              boxShadow: snapshot.isDragging
+                                ? "0 4px 8px rgba(0, 0, 0, 0.2)"
+                                : "none",
                             }}
                           >
                             {kennel.status !== "available" ? (
-                              <div>
-                                Kennel {kennel.kennel_number}
-                              </div>
+                              <div>Kennel {kennel.kennel_number}</div>
                             ) : (
                               `Kennel ${kennel.kennel_number}`
                             )}
@@ -265,6 +305,25 @@ const KennelGrid = () => {
             customer={selectedKennel}
           />
         )}
+         {/* Legend */}
+         <div className="flex gap-4 mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-green-500 rounded"></div>
+            <span>Available</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-yellow-500 rounded"></div>
+            <span>Reserved</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-red-500 rounded"></div>
+            <span>Occupied</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-gray-400 rounded"></div>
+            <span>Maintenance</span>
+          </div>
+        </div>
       </div>
     </DragDropContext>
   );

@@ -60,7 +60,7 @@ const ReservationList = () => {
   const confirmReservation = async (reservation) => {
     const { error } = await supabase
       .from("reservations")
-      .update({ status: "confirmed" })
+      .update({ status: "checkin" })
       .eq("id", reservation.id);
 
     if (!error) {
@@ -73,6 +73,7 @@ const ReservationList = () => {
         )
       );
       fetchReservations();
+      toast.success("Reservation checked in successfully!");
     }
   };
 
@@ -125,23 +126,14 @@ const ReservationList = () => {
 
       // Refresh reservations list
       await fetchReservations();
+      toast.success("Reservation canceled!");
     } catch (error) {
       console.error("Cancel reservation error:", error.message);
       // Handle error gracefully (e.g., show error message)
     }
   };
 
-  const checkoutReservation = async (reservation) => {
-    const { error } = await supabase
-      .from("reservations")
-      .update({ status: "checkout" })
-      .eq("id", reservation.id);
 
-    if (!error) {
-      await deleteFeedingInformation(reservation); // Call delete feeding information
-      fetchReservations();
-    }
-  };
 
   const deleteFeedingInformation = async (reservation) => {
     if (!reservation.kennel_ids || reservation.kennel_ids.length === 0) {
@@ -208,12 +200,18 @@ const ReservationList = () => {
 
   const handleCheckoutSuccess = () => {
     fetchReservations();
-    toast.success("Bill printed and dog checked out from kennel");
+    toast.success("Bill printed and checked out successfully!");
+  };
+
+  const handleEditModalSave = () => {
+    fetchReservations();
+    setIsEditModalOpen(false);
+    toast.success("Reservation updated successfully!");
   };
 
   return (
     <div>
-      <ToastContainer />
+      <ToastContainer autoClose={2000}/>
       <h2 className="text-2xl font-bold mb-4">Reservation List</h2>
       <ReservationFilter
         searchQuery={searchQuery}
@@ -249,7 +247,7 @@ const ReservationList = () => {
           selectedReservation={selectedReservation}
           isOpen={isEditModalOpen}
           onClose={() => setIsEditModalOpen(false)}
-          onSave={fetchReservations}
+          onSave={handleEditModalSave}
         />
       )}
       {isCheckoutModalOpen && (

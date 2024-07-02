@@ -1,16 +1,11 @@
 import React, { useEffect, useState, Fragment } from "react";
 import PropTypes from "prop-types";
 import { supabase } from "../supabase";
-import { Dialog, Transition } from "@headlessui/react";
+import { Dialog, Transition, Switch } from "@headlessui/react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
-const ReservationEditModal = ({
-  selectedReservation,
-  isOpen,
-  onClose,
-  onSave,
-}) => {
+const ReservationEditModal = ({ selectedReservation, isOpen, onClose, onSave }) => {
   const [reservationInfo, setReservationInfo] = useState({
     customer_name: "",
     customer_phone: "",
@@ -167,192 +162,196 @@ const ReservationEditModal = ({
         onClose={onClose}
       >
         <div className="flex min-h-screen items-center justify-center p-4 bg-gray-800 bg-opacity-50">
-          <Dialog.Panel className="rounded-lg bg-white p-8 shadow-xl w-1/2">
+          <Dialog.Panel className="rounded-lg bg-white p-8 shadow-xl w-full max-w-4xl">
             <Dialog.Title className="text-lg font-bold">
               Edit Reservation and Pet Information
             </Dialog.Title>
-            <div className="mt-4">
-              <label className="block font-semibold">Customer Name</label>
-              <input
-                type="text"
-                className="w-full p-2 border rounded-md"
-                value={reservationInfo.customer_name}
-                onChange={(e) =>
-                  setReservationInfo({
-                    ...reservationInfo,
-                    customer_name: e.target.value,
-                  })
-                }
-              />
-            </div>
-            <div className="mt-4">
-              <label className="block font-semibold">Customer Phone</label>
-              <input
-                type="text"
-                className="w-full p-2 border rounded-md"
-                value={reservationInfo.customer_phone}
-                onChange={(e) =>
-                  setReservationInfo({
-                    ...reservationInfo,
-                    customer_phone: e.target.value,
-                  })
-                }
-              />
-            </div>
-            <div className="mt-4">
-              <label className="block font-semibold">Customer Address</label>
-              <input
-                type="text"
-                className="w-full p-2 border rounded-md"
-                value={reservationInfo.customer_address}
-                onChange={(e) =>
-                  setReservationInfo({
-                    ...reservationInfo,
-                    customer_address: e.target.value,
-                  })
-                }
-              />
-            </div>
-            <div className="mt-4">
-              <label className="block font-semibold">Pet Name</label>
-              <input
-                type="text"
-                className="w-full p-2 border rounded-md"
-                value={reservationInfo.pet_name}
-                onChange={(e) =>
-                  setReservationInfo({
-                    ...reservationInfo,
-                    pet_name: e.target.value,
-                  })
-                }
-              />
-            </div>
-            <div className="mt-4">
-              <label className="block font-semibold">Pet Breed</label>
-              <input
-                type="text"
-                className="w-full p-2 border rounded-md"
-                value={reservationInfo.pet_breed}
-                onChange={(e) =>
-                  setReservationInfo({
-                    ...reservationInfo,
-                    pet_breed: e.target.value,
-                  })
-                }
-              />
-            </div>
-            <div className="mt-4">
-              <label className="block font-semibold">Check In</label>
-              <DatePicker
-                selected={reservationInfo.start_date}
-                onChange={(date) =>
-                  setReservationInfo({ ...reservationInfo, start_date: date })
-                }
-                dateFormat="yyyy-MM-dd"
-                className="w-full p-2 border rounded-md"
-              />
-            </div>
-            <div className="mt-4">
-              <label className="block font-semibold">Check Out</label>
-              <DatePicker
-                selected={reservationInfo.end_date}
-                onChange={(date) =>
-                  setReservationInfo({ ...reservationInfo, end_date: date })
-                }
-                dateFormat="yyyy-MM-dd"
-                className="w-full p-2 border rounded-md"
-              />
-            </div>
-            <div className="mt-4">
-              <label className="block font-semibold">
-                Dietary Requirements
-              </label>
-              <textarea
-                className="w-full p-2 border rounded-md"
-                value={petInfo.dietary_requirements}
-                onChange={(e) =>
-                  setPetInfo({
-                    ...petInfo,
-                    dietary_requirements: e.target.value,
-                  })
-                }
-              />
-            </div>
-            <div className="mt-4">
-              <label className="block font-semibold">
-                Special Care Instructions
-              </label>
-              <textarea
-                className="w-full p-2 border rounded-md"
-                value={petInfo.special_care_instructions}
-                onChange={(e) =>
-                  setPetInfo({
-                    ...petInfo,
-                    special_care_instructions: e.target.value,
-                  })
-                }
-              />
-            </div>
-            <div className="mt-4">
-              <label className="block font-semibold">Medical Notes</label>
-              <textarea
-                className="w-full p-2 border rounded-md"
-                value={petInfo.medical_notes}
-                onChange={(e) =>
-                  setPetInfo({ ...petInfo, medical_notes: e.target.value })
-                }
-              />
-            </div>
-            <div className="mt-4">
-              <label className="block font-semibold">Pickup</label>
-              <input
-                type="checkbox"
-                checked={reservationInfo.pickup}
-                onChange={(e) =>
-                  setReservationInfo({
-                    ...reservationInfo,
-                    pickup: e.target.checked,
-                  })
-                }
-              />
-            </div>
-            <div className="mt-4">
-              <label className="block font-semibold">Drop</label>
-              <input
-                type="checkbox"
-                checked={reservationInfo.drop}
-                onChange={(e) =>
-                  setReservationInfo({
-                    ...reservationInfo,
-                    drop: e.target.checked,
-                  })
-                }
-              />
-            </div>
-            <div className="mt-4">
-              <label className="block font-semibold">Groom</label>
-              <input
-                type="checkbox"
-                checked={reservationInfo.groom}
-                onChange={(e) =>
-                  setReservationInfo({
-                    ...reservationInfo,
-                    groom: e.target.checked,
-                  })
-                }
-              />
+            <div className="mt-4 grid grid-cols-2 gap-6">
+              <div className="col-span-2">
+                <label className="block font-semibold">Customer Name</label>
+                <input
+                  type="text"
+                  className="w-full p-2 border rounded-md"
+                  value={reservationInfo.customer_name}
+                  onChange={(e) =>
+                    setReservationInfo({
+                      ...reservationInfo,
+                      customer_name: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div className="col-span-1">
+                <label className="block font-semibold">Customer Phone</label>
+                <input
+                  type="text"
+                  className="w-full p-2 border rounded-md"
+                  value={reservationInfo.customer_phone}
+                  onChange={(e) =>
+                    setReservationInfo({
+                      ...reservationInfo,
+                      customer_phone: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div className="col-span-1">
+                <label className="block font-semibold">Customer Address</label>
+                <input
+                  type="text"
+                  className="w-full p-2 border rounded-md"
+                  value={reservationInfo.customer_address}
+                  onChange={(e) =>
+                    setReservationInfo({
+                      ...reservationInfo,
+                      customer_address: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div className="col-span-1">
+                <label className="block font-semibold">Pet Name</label>
+                <input
+                  type="text"
+                  className="w-full p-2 border rounded-md"
+                  value={reservationInfo.pet_name}
+                  onChange={(e) =>
+                    setReservationInfo({
+                      ...reservationInfo,
+                      pet_name: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div className="col-span-1">
+                <label className="block font-semibold">Pet Breed</label>
+                <input
+                  type="text"
+                  className="w-full p-2 border rounded-md"
+                  value={reservationInfo.pet_breed}
+                  onChange={(e) =>
+                    setReservationInfo({
+                      ...reservationInfo,
+                      pet_breed: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div className="col-span-1">
+                <label className="block font-semibold">Check In</label>
+                <DatePicker
+                  selected={reservationInfo.start_date}
+                  onChange={(date) =>
+                    setReservationInfo({ ...reservationInfo, start_date: date })
+                  }
+                  dateFormat="yyyy-MM-dd"
+                  className="w-full p-2 border rounded-md"
+                />
+              </div>
+              <div className="col-span-1">
+                <label className="block font-semibold">Check Out</label>
+                <DatePicker
+                  selected={reservationInfo.end_date}
+                  onChange={(date) =>
+                    setReservationInfo({ ...reservationInfo, end_date: date })
+                  }
+                  dateFormat="yyyy-MM-dd"
+                  className="w-full p-2 border rounded-md"
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="block font-semibold">Dietary Requirements</label>
+                <textarea
+                  className="w-full p-2 border rounded-md"
+                  value={petInfo.dietary_requirements}
+                  onChange={(e) =>
+                    setPetInfo({
+                      ...petInfo,
+                      dietary_requirements: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="block font-semibold">Special Care Instructions</label>
+                <textarea
+                  className="w-full p-2 border rounded-md"
+                  value={petInfo.special_care_instructions}
+                  onChange={(e) =>
+                    setPetInfo({
+                      ...petInfo,
+                      special_care_instructions: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="block font-semibold">Medical Notes</label>
+                <textarea
+                  className="w-full p-2 border rounded-md"
+                  value={petInfo.medical_notes}
+                  onChange={(e) =>
+                    setPetInfo({ ...petInfo, medical_notes: e.target.value })
+                  }
+                />
+              </div>
+              <div className="col-span-2">
+                <legend className="text-lg font-medium text-gray-900 mb-2">
+                  Services
+                </legend>
+                <div className="flex space-x-6">
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      checked={reservationInfo.pickup}
+                      onChange={(value) => setReservationInfo({ ...reservationInfo, pickup: value })}
+                      className={`${reservationInfo.pickup ? 'bg-blue-500' : 'bg-gray-200'} relative inline-flex items-center h-6 rounded-full w-11`}
+                    >
+                      <span
+                        className={`${reservationInfo.pickup ? 'translate-x-6' : 'translate-x-1'} inline-block w-4 h-4 transform bg-white rounded-full transition-transform`}
+                      />
+                    </Switch>
+                    <span className="text-sm text-gray-700">Pickup</span>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      checked={reservationInfo.groom}
+                      onChange={(value) => setReservationInfo({ ...reservationInfo, groom: value })}
+                      className={`${reservationInfo.groom ? 'bg-blue-500' : 'bg-gray-200'} relative inline-flex items-center h-6 rounded-full w-11`}
+                    >
+                      <span
+                        className={`${reservationInfo.groom ? 'translate-x-6' : 'translate-x-1'} inline-block w-4 h-4 transform bg-white rounded-full transition-transform`}
+                      />
+                    </Switch>
+                    <span className="text-sm text-gray-700">Groom</span>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      checked={reservationInfo.drop}
+                      onChange={(value) => setReservationInfo({ ...reservationInfo, drop: value })}
+                      className={`${reservationInfo.drop ? 'bg-blue-500' : 'bg-gray-200'} relative inline-flex items-center h-6 rounded-full w-11`}
+                    >
+                      <span
+                        className={`${reservationInfo.drop ? 'translate-x-6' : 'translate-x-1'} inline-block w-4 h-4 transform bg-white rounded-full transition-transform`}
+                      />
+                    </Switch>
+                    <span className="text-sm text-gray-700">Drop</span>
+                  </div>
+                </div>
+              </div>
             </div>
             <div className="flex justify-end mt-6 space-x-4">
               <button
                 type="button"
-                className="bg-gray-300 px-4 py-2 rounded-md"
+                className="bg-gray-300 px-4 py-2 rounded-md hover:bg-gray-400"
                 onClick={onClose}
               >
                 Cancel
               </button>
               <button
                 type="button"
-                className="bg-blue-500 text-white px-4 py-2 rounded-md"
+                className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
                 onClick={saveInformation}
               >
                 Save

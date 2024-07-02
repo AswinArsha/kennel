@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { supabase } from "../supabase";
 import AddKennelsToSetModal from "./AddKennelsToSetModal";
 import { MdAdd, MdClose } from "react-icons/md";
-import { toast } from "react-toastify";
+import { toast, ToastContainer } from "react-toastify";
+import 'react-toastify/dist/ReactToastify.css';
 
 const EditSetsModal = ({ isOpen, onClose, setToEdit }) => {
   const [editedSetName, setEditedSetName] = useState("");
@@ -92,7 +93,7 @@ const EditSetsModal = ({ isOpen, onClose, setToEdit }) => {
       setEditedKennels([]);
       setError("");
       onClose();
-      toast.success("Set updated successfully!");
+      toast.success("Set updated successfully!"); // Trigger success toast
     } catch (error) {
       console.error("Error updating set:", error.message);
       setError("An error occurred while updating the set. Please try again.");
@@ -184,6 +185,7 @@ const EditSetsModal = ({ isOpen, onClose, setToEdit }) => {
           onKennelsAdded={handleAddKennelsToSet}
         />
       )}
+      <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} />
     </div>
   );
 };

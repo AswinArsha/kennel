@@ -143,7 +143,7 @@ const ReservationTable = ({
               <td className="whitespace-nowrap px-4 py-2 text-gray-800">
                 <span
                   className={`rounded py-1 px-3 text-xs font-bold ${
-                    reservation.status === "confirmed"
+                    reservation.status === "checkin"
                       ? "bg-green-400"
                       : reservation.status === "canceled"
                       ? "bg-red-400"
@@ -152,7 +152,7 @@ const ReservationTable = ({
                       : "bg-yellow-400"
                   }`}
                 >
-                  {reservation.status}
+                  {reservation.status === "checkin" ? "check in" : reservation.status} 
                 </span>
               </td>
               <td className="whitespace-nowrap px-4 py-2 text-gray-800">
@@ -162,7 +162,7 @@ const ReservationTable = ({
                       className="bg-green-500 text-white py-1 px-2 rounded-md hover:bg-green-600"
                       onClick={() => onConfirm(reservation)}
                     >
-                      Confirm
+                      Check in
                     </button>
                     <button
                       className="bg-blue-500 text-white py-1 px-2 rounded-md hover:bg-blue-600 ml-2"
@@ -180,7 +180,7 @@ const ReservationTable = ({
                     Cancel
                   </button>
                 )}
-                {reservation.status === "confirmed" && (
+                {reservation.status === "checkin" && (
                   <>
                     <button
                       className="bg-blue-500 text-white py-1 px-2 rounded-md hover:bg-blue-600 ml-2"
@@ -192,7 +192,7 @@ const ReservationTable = ({
                       className="bg-indigo-500 text-white py-1 px-2 rounded-md hover:bg-indigo-600 ml-2"
                       onClick={() => handleCheckout(reservation)}
                     >
-                      Checkout
+                      Check out
                     </button>
                   </>
                 )}
