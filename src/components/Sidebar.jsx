@@ -10,6 +10,7 @@ import {
   FaUsers,
   FaTachometerAlt,
   FaTimes,
+  FaRegCalendarAlt,
 } from "react-icons/fa";
 import { Tooltip } from "react-tooltip";
 
@@ -58,6 +59,12 @@ const Sidebar = () => {
       path: "/dashboard",
       icon: <FaTachometerAlt />,
       tooltip: "View dashboard statistics",
+    },
+    {
+      title: "Calendar",
+      path: "/calendar",
+      icon: <FaRegCalendarAlt />,
+      tooltip: "View reservation calendar",
     },
   ];
 

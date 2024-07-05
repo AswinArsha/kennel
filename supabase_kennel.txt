@@ -106,14 +106,14 @@ create table
     constraint pet_information_reservation_id_fkey foreign key (reservation_id) references reservations (id)
   ) tablespace pg_default;
   ,
-  create table
+ create table
   public.reservations (
     id serial,
     pet_name character varying(255) not null,
     pet_breed character varying(255) not null,
     start_date date not null,
     end_date date not null,
-    status character varying(20) null default 'pending'::character varying,
+    status character varying(20) null default '''reserved''::character varying'::character varying,
     kennel_ids integer[] null,
     pickup boolean null default false,
     groom boolean null default false,
@@ -124,7 +124,6 @@ create table
     constraint reservations_pkey primary key (id),
     constraint reservations_customer_id_fkey foreign key (customer_id) references customers (id)
   ) tablespace pg_default;
-
   ,
 
   "Afghan Hound",

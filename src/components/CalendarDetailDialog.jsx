@@ -15,7 +15,7 @@ import "jspdf-autotable";
 
 const customStyles = {
   overlay: {
-    backgroundColor: "rgba(0, 0, 0, 0.7)", // Slightly darker overlay
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
     zIndex: "1000",
   },
   content: {
@@ -26,17 +26,17 @@ const customStyles = {
     marginRight: "-50%",
     transform: "translate(-50%, -50%)",
     padding: "0",
-    borderRadius: "12px", // Increased border radius
+    borderRadius: "12px",
     maxWidth: "900px",
     width: "50%",
     maxHeight: "90vh",
     height: "80%",
     overflow: "auto",
-    transition: "all 0.3s ease-in-out", // Added transition for smooth modal animation
+    transition: "all 0.3s ease-in-out",
   },
 };
 
-const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
+const CalendarDetailDialog = ({ customer, isOpen, onClose }) => {
   const [customerDetail, setCustomerDetail] = useState({
     customer_name: "",
     customer_phone: "",
@@ -50,15 +50,9 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
   const [isDownloadingPDF, setIsDownloadingPDF] = useState(false);
 
   useEffect(() => {
-    if (customer) {
-      setKennelNumber(`Kennel ${customer.kennel_number} Details`);
-    }
-  }, [customer]);
-
-  useEffect(() => {
     const fetchCustomerDetail = async () => {
       if (customer) {
-        const { data: reservation, error: reservationError } = await supabase
+        const { data, error } = await supabase
           .from("reservations")
           .select(
             `
@@ -76,15 +70,15 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
             )
           `
           )
-          .eq("kennel_ids", `{${customer.id}}`) // Filter by kennel ID
+          .eq("id", customer.id) // Filter by reservation ID
           .single();
 
-        if (reservationError) {
+        if (error) {
           console.error(
             "Error fetching reservation details:",
-            reservationError.message
+            error.message
           );
-        } else {
+        } else if (data) {
           const {
             pet_name,
             pet_breed,
@@ -95,26 +89,39 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
             drop,
             pet_information,
             customers,
-          } = reservation;
+            kennel_ids,
+          } = data;
 
-          setCustomerDetail({
-            customer_name: customers.customer_name,
-            customer_phone: customers.customer_phone,
-            customer_address: customers.customer_address,
-            pets: [
-              {
-                pet_name,
-                pet_breed,
-                start_date,
-                end_date,
-                pickup,
-                groom,
-                drop,
-                ...pet_information[0],
-              },
-            ],
-            kennel_numbers: [customer.kennel_number],
-          });
+          // Fetch kennel numbers based on kennel_ids
+          const { data: kennelsData, error: kennelsError } = await supabase
+            .from("kennels")
+            .select("kennel_number")
+            .in("id", kennel_ids);
+
+          if (kennelsError) {
+            console.error("Error fetching kennel numbers:", kennelsError.message);
+          } else {
+            setCustomerDetail({
+              customer_name: customers.customer_name,
+              customer_phone: customers.customer_phone,
+              customer_address: customers.customer_address,
+              pets: [
+                {
+                  pet_name,
+                  pet_breed,
+                  start_date,
+                  end_date,
+                  pickup,
+                  groom,
+                  drop,
+                  ...pet_information[0],
+                },
+              ],
+              kennel_numbers: kennelsData.map((kennel) => kennel.kennel_number),
+            });
+          }
+        } else {
+          console.error("No reservations found for this customer.");
         }
       }
     };
@@ -176,29 +183,29 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
       startY: 40,
       head: [["Date", "Morning", "Noon"]],
       body: tableData,
-      theme: "striped", // Add striped theme for better readability
+      theme: "striped",
       headStyles: {
-        fillColor: [100, 100, 255], // Set header background color to a subtle blue
-        textColor: [255, 255, 255], // Set header text color to white
-        fontSize: 14, // Set header font size
-        fontStyle: "bold", // Make header text bold
-        halign: "center", // Center-align header text
+        fillColor: [100, 100, 255],
+        textColor: [255, 255, 255],
+        fontSize: 14,
+        fontStyle: "bold",
+        halign: "center",
       },
       bodyStyles: {
-        fontSize: 12, // Set body font size
-        cellPadding: 6, // Add cell padding for better readability
+        fontSize: 12,
+        cellPadding: 6,
       },
       alternateRowStyles: {
-        fillColor: [240, 240, 255], // Set alternate row background color for better readability
+        fillColor: [240, 240, 255],
       },
       styles: {
-        lineColor: [200, 200, 200], // Set border color
-        lineWidth: 0.1, // Set border width
-        font: "helvetica", // Set font to helvetica
-        fontStyle: "normal", // Set font style to normal
-        overflow: "linebreak", // Enable line breaking for text overflow
+        lineColor: [200, 200, 200],
+        lineWidth: 0.1,
+        font: "helvetica",
+        fontStyle: "normal",
+        overflow: "linebreak",
       },
-      margin: { top: 40, right: 20, bottom: 20, left: 20 }, // Add margins for better spacing
+      margin: { top: 40, right: 20, bottom: 20, left: 20 },
     });
 
     doc.save("feeding_information.pdf");
@@ -213,7 +220,7 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
       contentLabel="Customer Details"
       ariaHideApp={false}
     >
-      <div className="bg-white p-8  ">
+      <div className="bg-white p-8">
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-2xl font-bold text-gray-800">{kennelNumber}</h2>
           <button
@@ -225,7 +232,7 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
         </div>
 
         <Tabs>
-          <TabList className="flex  border-b border-gray-300">
+          <TabList className="flex border-b border-gray-300">
             <Tab
               className="px-4 py-2 rounded-t-lg text-gray-600 cursor-pointer hover:text-gray-800 transition-colors duration-300"
               selectedClassName="bg-blue-500 text-white"
@@ -270,6 +277,10 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
                         <div className="flex justify-between">
                           <span className="text-gray-600">Check Out:</span>
                           <span>{pet.end_date}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Kennel Number:</span>
+                          <span>{customerDetail.kennel_numbers.join(", ")}</span>
                         </div>
                       </div>
 
@@ -376,7 +387,7 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
             </div>
           </TabPanel>
           <TabPanel>
-            <div className="mt-4 over ">
+            <div className="mt-4">
               <div className="flex items-center mb-4">
                 <label className="mr-4 font-semibold text-gray-700">
                   Filter by Date:
@@ -400,7 +411,7 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
                   Download PDF
                 </button>
               </div>
-              <div className="rounded-lg  h-2 border border-gray-200 shadow-md">
+              <div className="rounded-lg border border-gray-200 shadow-md">
                 <div className="max-h-72 overflow-y-auto">
                   <table className="min-w-full divide-y divide-gray-200 bg-white text-sm">
                     <thead className="bg-gray-100 top-0 sticky text-gray-700">
@@ -434,7 +445,7 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
                                     : "bg-white hover:bg-gray-100 transition-colors duration-300"
                                 } hover:bg-gray-200`}
                               >
-                                <td className="whitespace-nowrap  px-3 py-2">
+                                <td className="whitespace-nowrap px-3 py-2">
                                   {new Date(
                                     feeding.feeding_date
                                   ).toLocaleDateString()}
@@ -512,4 +523,5 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
     </Modal>
   );
 };
-export default CustomerDetailDialog;
+
+export default CalendarDetailDialog;

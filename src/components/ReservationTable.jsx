@@ -156,7 +156,7 @@ const ReservationTable = ({
                 </span>
               </td>
               <td className="whitespace-nowrap px-4 py-2 text-gray-800">
-                {reservation.status === "pending" && (
+                {reservation.status === "reserved" && (
                   <>
                     <button
                       className="bg-green-500 text-white py-1 px-2 rounded-md hover:bg-green-600"
@@ -172,7 +172,7 @@ const ReservationTable = ({
                     </button>
                   </>
                 )}
-                {reservation.status === "pending" && onCancel && (
+                {reservation.status === "reserved" && onCancel && (
                   <button
                     className="bg-red-500 text-white py-1 px-2 rounded-md hover:bg-red-600 ml-2"
                     onClick={() => onCancel && onCancel(reservation)} // Ensure onCancel is passed down correctly

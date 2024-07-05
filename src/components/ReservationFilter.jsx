@@ -74,7 +74,7 @@ const ReservationFilter = ({
             className="p-3 pl-10 pr-4 border rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">All Status</option>
-            <option value="pending">Pending</option>
+            <option value="reserved">Reserved</option>
             <option value="confirmed">Confirmed</option>
           </select>
           <FaFilter className="absolute top-1/2 left-3 transform -translate-y-1/2 text-gray-400" />

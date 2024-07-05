@@ -1,440 +1,3 @@
-Add a feature to the pet boarding management system that allows the reservation of kennels to be more flexible. The feature should enable the temporary use of a reserved kennel by another customer if no other kennels are available, with the ability to swap kennels when needed. This will optimize kennel usage and improve the financial efficiency of the business.
-
-**Detailed Instructions:**
-
-1. **Enhance Reservation Logic:**
-   - Implement logic to check for available kennels during the desired reservation period.
-   - If all kennels are occupied or reserved, identify reserved kennels that can be temporarily made available until their reserved check-in date.
-
-2. **Implement Temporary Reservation Feature:**
-   - Allow a new customer to temporarily use a reserved kennel if no other kennels are available.
-   - Ensure the system can swap kennels when the original customer arrives.
-
-3. **Drag-and-Drop Functionality:**
-   - Enhance the drag-and-drop functionality to support swapping kennel reservations between customers.
-   - When swapping, ensure that the correct customer details are retained and updated.
-
-4. **Reservation Form Updates:**
-   - Add an option in the reservation form to allow the use of a reserved kennel if necessary.
-   - Include a note explaining that the reserved kennel will be available only temporarily and will require a swap when the original customer arrives.
-
-5. **Example Workflow:**
-   - **Scenario:**
-     - Customer 1 has reserved Kennel 1 from 19/12/2012.
-     - Kennel 2 is occupied and will be available on 18/12/2012.
-     - Customer 2 wants to reserve a kennel from 16/12/2012 to 19/12/2012.
-     - Allow Customer 2 to use Kennel 1 from 16/12/2012 to 18/12/2012.
-     - When Customer 1 arrives on 19/12/2012, swap Customer 2 to Kennel 2.
-
-.kennelGrod.jsx :
-import React, { useEffect, useState } from "react";
-import { supabase } from "../supabase";
-import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
-import AddKennelsModal from "./AddKennelsModal";
-import EditSetsModal from "./EditSetsModal";
-import ManageKennelsModal from "./ManageKennelsModal";
-import CustomerDetailDialog from "./CustomerDetailDialog";
-import { MdEdit } from "react-icons/md";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import {
-  updateKennelStatus,
-  updatePetInformation,
-  updateReservation,
-  updateFeedingSchedule,
-} from "./kennelUtils";
-
-const KennelGrid = () => {
-  const [kennels, setKennels] = useState([]);
-  const [isAddKennelsModalOpen, setIsAddKennelsModalOpen] = useState(false);
-  const [isManageKennelsModalOpen, setIsManageKennelsModalOpen] = useState(false);
-  const [isEditSetsModalOpen, setIsEditSetsModalOpen] = useState(false);
-  const [selectedSet, setSelectedSet] = useState(null);
-  const [selectedKennel, setSelectedKennel] = useState(null);
-  const [isCustomerDetailDialogOpen, setIsCustomerDetailDialogOpen] = useState(false);
-
-  // Fetch kennels data
-  const fetchKennels = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("kennels")
-        .select("*")
-        .order("created_at", { ascending: true })
-        .order("set_name", { ascending: true })
-        .order("kennel_number", { ascending: true });
-
-      if (error) {
-        throw error;
-      } else {
-        setKennels(data);
-      }
-    } catch (error) {
-      console.error("Error fetching kennels:", error.message);
-    }
-  };
-
-  useEffect(() => {
-    fetchKennels();
-
-    const subscription = supabase
-      .channel("public:kennels")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "kennels" },
-        () => {
-          fetchKennels();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(subscription);
-    };
-  }, []);
-
-  // Open the add kennels modal
-  const openAddKennelsModal = () => {
-    setIsAddKennelsModalOpen(true);
-  };
-
-  // Open the manage kennels modal
-  const openManageKennelsModal = () => {
-    setIsManageKennelsModalOpen(true);
-  };
-
-  // Open the edit sets modal
-  const openEditSetsModal = (set) => {
-    setSelectedSet(set);
-    setIsEditSetsModalOpen(true);
-  };
-
-  // Handle kennel click
-  const handleKennelClick = (kennel) => {
-    if (kennel.status === "occupied" || kennel.status === "reserved") {
-      setSelectedKennel(kennel);
-      setIsCustomerDetailDialogOpen(true);
-    }
-  };
-
-  const onDragEnd = async (result) => {
-    if (!result.destination) {
-      return;
-    }
-
-    const sourceId = parseInt(result.source.droppableId);
-    const destinationId = parseInt(result.destination.droppableId);
-
-    if (sourceId === destinationId) {
-      return;
-    }
-
-    const sourceKennel = kennels.find((kennel) => kennel.id === sourceId);
-    const destinationKennel = kennels.find(
-      (kennel) => kennel.id === destinationId
-    );
-
-    if (
-      sourceKennel.status === "available" ||
-      destinationKennel.status !== "available"
-    ) {
-      return;
-    }
-
-    try {
-      await updateKennelStatus(sourceId, destinationId);
-      await updatePetInformation(sourceId, destinationId);
-      await updateReservation(sourceId, destinationId);
-      await updateFeedingSchedule(sourceId, destinationId);
-
-      fetchKennels();
-      toast.success(
-        `Kennel ${destinationKennel.kennel_number} status changed to ${sourceKennel.status}`
-      );
-    } catch (error) {
-      console.error("Error updating kennel status:", error.message);
-      toast.error("Error updating kennel status. Please try again.");
-    }
-  };
-
-  // Group kennels by set names and sort them
-  const groupedKennels = kennels.reduce((acc, kennel) => {
-    const setName = kennel.set_name;
-    if (!acc[setName]) {
-      acc[setName] = [];
-    }
-    acc[setName].push(kennel);
-    return acc;
-  }, {});
-
-  // Sort sets by creation order and kennels within each set by number
-  const sortedSets = Object.keys(groupedKennels).sort((a, b) => {
-    const setA = kennels.find((kennel) => kennel.set_name === a);
-    const setB = kennels.find((kennel) => kennel.set_name === b);
-    return new Date(setA.created_at) - new Date(setB.created_at);
-  });
-
-  return (
-    <DragDropContext onDragEnd={onDragEnd}>
-      <div className="p-4">
-        <ToastContainer
-          position="top-right"
-          autoClose={2000}
-          hideProgressBar={false}
-        />
-        <h2 className="text-2xl font-semibold mb-4">Kennel Status Overview</h2>
-       
-        {/* Add Kennels and Manage Kennels Buttons */}
-        <div className="flex gap-4 mb-4">
-          <button
-            className="bg-blue-500 text-white px-4 py-2 rounded-md"
-            onClick={openAddKennelsModal}
-            title="Click to add new kennels"
-          >
-            Add Kennels
-          </button>
-          <button
-            className="bg-blue-500 text-white px-4 py-2 rounded-md"
-            onClick={openManageKennelsModal}
-            title="Click to manage existing kennels"
-          >
-            Manage Kennels
-          </button>
-        </div>
-
-        {/* Display Kennels */}
-        {sortedSets.map((setName, index) => (
-          <div key={index} className="border-b-2 border-gray-200 mb-4 ">
-            {/* Set Name */}
-            <div className="flex items-center mb-2">
-              <h3 className="text-lg mr-1 font-semibold">{setName}</h3>
-              {setName !== "Maintenance" && (
-                <button
-                  onClick={() => openEditSetsModal({ name: setName })}
-                  className="text-gray-500 hover:text-gray-700"
-                  title="Edit set"
-                >
-                  <MdEdit />
-                </button>
-              )}
-            </div>
-
-            {/* Kennels in the Set */}
-            <div className="grid grid-cols-5 md:grid-cols-10 gap-4 mb-4">
-              {groupedKennels[setName].map((kennel) => (
-                <Droppable
-                  key={kennel.id}
-                  droppableId={kennel.id.toString()}
-                  isDropDisabled={kennel.status !== "available" || setName === "Maintenance"}
-                >
-                  {(provided, snapshot) => (
-                    <div
-                      ref={provided.innerRef}
-                      {...provided.droppableProps}
-                      className={`p-4 text-center rounded-md transition-colors ${
-                        snapshot.isDraggingOver
-                          ? "bg-blue-200"
-                          : setName === "Maintenance"
-                          ? "bg-gray-400 text-white"
-                          : kennel.status === "available"
-                          ? "bg-green-500 text-white"
-                          : kennel.status === "reserved"
-                          ? "bg-yellow-500 text-white cursor-pointer"
-                          : kennel.status === "occupied"
-                          ? "bg-red-500 text-white cursor-pointer"
-                          : "bg-gray-400 text-white"
-                      }`}
-                      style={{
-                        transition: "background-color 0.3s ease",
-                        cursor:
-                          kennel.status === "reserved" ||
-                          kennel.status === "occupied"
-                            ? "pointer"
-                            : "default",
-                      }}
-                      onClick={() =>
-                        (kennel.status === "reserved" ||
-                          kennel.status === "occupied") &&
-                        handleKennelClick(kennel)
-                      }
-                    >
-                      <Draggable
-                        draggableId={kennel.id.toString()}
-                        index={kennel.kennel_number}
-                        isDragDisabled={kennel.status === "available" || setName === "Maintenance"}
-                      >
-                        {(provided, snapshot) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                            style={{
-                              ...provided.draggableProps.style,
-                              cursor:
-                                kennel.status === "available" ||
-                                setName === "Maintenance"
-                                  ? "default"
-                                  : "grab",
-                              background: snapshot.isDragging
-                                ? "rgba(0,0,0,0.1)"
-                                : "inherit",
-                              borderRadius: "8px",
-                              padding: "8px",
-                              boxShadow: snapshot.isDragging
-                                ? "0 4px 8px rgba(0, 0, 0, 0.2)"
-                                : "none",
-                            }}
-                          >
-                            {kennel.status !== "available" ? (
-                              <div>Kennel {kennel.kennel_number}</div>
-                            ) : (
-                              `Kennel ${kennel.kennel_number}`
-                            )}
-                          </div>
-                        )}
-                      </Draggable>
-                      {provided.placeholder}
-                    </div>
-                  )}
-                </Droppable>
-              ))}
-            </div>
-          </div>
-        ))}
-
-        {/* Add Kennels Modal */}
-        {isAddKennelsModalOpen && (
-          <AddKennelsModal
-            isOpen={isAddKennelsModalOpen}
-            onClose={() => setIsAddKennelsModalOpen(false)}
-          />
-        )}
-
-        {/* Manage Kennels Modal */}
-        {isManageKennelsModalOpen && (
-          <ManageKennelsModal
-            isOpen={isManageKennelsModalOpen}
-            onClose={() => setIsManageKennelsModalOpen(false)}
-          />
-        )}
-
-        {/* Edit Sets Modal */}
-        {isEditSetsModalOpen && (
-          <EditSetsModal
-            isOpen={isEditSetsModalOpen}
-            onClose={() => setIsEditSetsModalOpen(false)}
-            setToEdit={selectedSet}
-          />
-        )}
-
-        {/* Customer Detail Dialog */}
-        {isCustomerDetailDialogOpen && (
-          <CustomerDetailDialog
-            isOpen={isCustomerDetailDialogOpen}
-            onClose={() => setIsCustomerDetailDialogOpen(false)}
-            customer={selectedKennel}
-          />
-        )}
-         {/* Legend */}
-         <div className="flex gap-4 mb-4">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-green-500 rounded"></div>
-            <span>Available</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-yellow-500 rounded"></div>
-            <span>Reserved</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-red-500 rounded"></div>
-            <span>Occupied</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-gray-400 rounded"></div>
-            <span>Maintenance</span>
-          </div>
-        </div>
-      </div>
-    </DragDropContext>
-  );
-};
-
-export default KennelGrid;
-,
-kennelUtils.js :
-import { supabase } from "../supabase";
-
-export const updateKennelStatus = async (sourceId, destinationId) => {
-  const { data: sourceKennel, error: sourceError } = await supabase
-    .from("kennels")
-    .select("status")
-    .eq("id", sourceId)
-    .single();
-
-  if (sourceError) throw sourceError;
-
-  const { error: updateSourceError } = await supabase
-    .from("kennels")
-    .update({ status: "available" })
-    .eq("id", sourceId);
-
-  if (updateSourceError) throw updateSourceError;
-
-  const { error: updateDestinationError } = await supabase
-    .from("kennels")
-    .update({ status: sourceKennel.status })
-    .eq("id", destinationId);
-
-  if (updateDestinationError) throw updateDestinationError;
-};
-
-export const updatePetInformation = async (sourceId, destinationId) => {
-  const { error: updateError } = await supabase
-    .from("pet_information")
-    .update({ kennel_id: destinationId })
-    .eq("kennel_id", sourceId);
-
-  if (updateError) throw updateError;
-};
-
-export const updateReservation = async (sourceId, destinationId) => {
-  const { data: reservations, error: fetchError } = await supabase
-    .from("reservations")
-    .select("id, kennel_ids, kennel_numbers")
-    .contains("kennel_ids", [sourceId]);
-
-  if (fetchError) throw fetchError;
-
-  for (const reservation of reservations) {
-    const updatedKennelIds = reservation.kennel_ids.map(id =>
-      id === sourceId ? destinationId : id
-    );
-
-    const updatedKennelNumbers = { ...reservation.kennel_numbers };
-    updatedKennelNumbers[destinationId] = updatedKennelNumbers[sourceId];
-    delete updatedKennelNumbers[sourceId];
-
-    const { error: updateError } = await supabase
-      .from("reservations")
-      .update({
-        kennel_ids: updatedKennelIds,
-        kennel_numbers: updatedKennelNumbers,
-      })
-      .eq("id", reservation.id);
-
-    if (updateError) throw updateError;
-  }
-};
-
-export const updateFeedingSchedule = async (sourceId, destinationId) => {
-  const { error: updateError } = await supabase
-    .from("feeding_schedule")
-    .update({ kennel_id: destinationId })
-    .eq("kennel_id", sourceId);
-
-  if (updateError) throw updateError;
-};
-,
-ReservationForm.jsx :
 import React, { useState, useEffect } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -444,10 +7,10 @@ import { FaCalendarAlt } from "react-icons/fa";
 import { Switch } from "@headlessui/react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { useSearchParams } from 'react-router-dom';
 
 const petBreeds = [
   "Affenpinscher",
-
   "Šarplaninac",
 ];
 
@@ -477,6 +40,14 @@ const ReservationForm = () => {
   const [showBreedOptions, setShowBreedOptions] = useState(false);
 
   const startDate = watch("startDate");
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    const startDateParam = searchParams.get('start_date');
+    if (startDateParam) {
+      setValue('startDate', new Date(startDateParam));
+    }
+  }, [searchParams, setValue]);
 
   const fetchCustomerDetails = async (phone) => {
     const { data, error } = await supabase
@@ -567,7 +138,7 @@ const ReservationForm = () => {
       }
 
       const reservationStatus =
-        data.endDate < new Date() ? "checked_out" : "pending";
+        data.endDate < new Date() ? "checked_out" : "reserved";
 
       for (const pet of pets) {
         const { error: reservationError } = await supabase
@@ -1073,7 +644,9 @@ const ReservationForm = () => {
 };
 
 export default ReservationForm;
-. supabase tables:
+
+,
+supabase tables:
 create table
   public.customers (
     id serial,
@@ -1144,57 +717,23 @@ create table
     constraint feeding_schedule_kennel_id_fkey foreign key (kennel_id) references kennels (id)
   ) tablespace pg_default;
 
-, can you suggest an method on how to do this or if is it possible ?  do you know how other hotels manage reservations for such cases .don't provide code now , i will ask for it later.
-
- SOLUTIONS :
- I believe a simplified version of the flexible reservation system would work best for your Pet Boarding Management System. Since you only have one side that employees use, we can focus on creating a system that gives your staff the tools they need to manage reservations efficiently while maximizing kennel usage. Here's a tailored approach for your specific case:
-
-1. Enhanced Reservation System:
-   - Implement a "Flexible Reservation" option in your existing reservation form.
-   - When making a new reservation, first check for fully available kennels.
-   - If no kennels are available for the entire duration, look for kennels that are partially available (i.e., available for at least part of the requested period).
-
-2. Kennel Assignment Logic:
-   - Assign the pet to the available kennel for the duration it's free.
-   - For the period where the original kennel is not available, flag the reservation as needing reassignment.
-
-3. Kennel Reassignment Dashboard:
-   - Create a new view in your KennelGrid component that shows reservations needing reassignment.
-   - This dashboard should display:
-     - The pet's name
-     - Current assigned kennel
-     - Dates needing reassignment
-     - Available kennels for those dates
-
-4. Manual Reassignment Process:
-   - Allow staff to manually reassign kennels using drag-and-drop functionality in the KennelGrid.
-   - When a staff member reassigns a kennel, update the reservation in the database.
-
-5. Notification System:
-   - Implement a simple notification system within the application to alert staff about reservations that need reassignment.
-   - This could be a counter on the dashboard showing the number of reservations needing attention.
-
-6. Database Modifications:
-   - Add a 'flexible_reservation' boolean field to your reservations table.
-   - Add a 'needs_reassignment' boolean field to your reservations table.
-   - Add a 'reassignment_date' date field to your reservations table.
-
-
-This system maintains the simplicity needed for a staff-only interface while providing the flexibility to maximize kennel usage. It doesn't require complex algorithms for automatic reassignment, which could be challenging to implement and maintain. Instead, it relies on your staff's judgement for kennel reassignments, which can be beneficial as they may have additional context about specific pets or customers.
-
-The manual reassignment process also allows for easier handling of special cases, such as if a customer has specific kennel preferences or if certain pets need to be kept separate.
 ,
-Here's a summary of the key components we need to implement or modify:
-ReservationForm.jsx:
-Add a "Flexible Reservation" option
-Implement logic to check for partially available kennels
-KennelGrid.jsx:
-Add a new section for "Reservations Needing Reassignment"
-Implement drag-and-drop functionality for kennel reassignment
-kennelUtils.js:
-Add functions to handle flexible reservations and reassignments
-Database modifications:
-Add 'flexible_reservation', 'needs_reassignment', and 'reassignment_date' fields to the reservations table
-New components:
-ReassignmentDashboard.jsx: To display reservations needing reassignment
-NotificationSystem.jsx: To alert staff about reservations needing attention
+
+This project is designed  for pet boarding facilities. Leveraging a modern tech stack that includes React.js, Tailwind CSS, Supabase.
+
+I need assistance in enhancing my reservation system for a pet boarding house to more accurately reflect kennel availability over time. Currently, the system only displays kennels as either available or unavailable based on their immediate status, without considering future reservations or check-outs. This leads to inefficiencies, particularly when:
+
+1. **Example Scenario:**
+   - Kennel 1 is occupied and will be checked out the next day.
+   - Kennel 2 is reserved by a customer and will be checked in next week.
+   - A new customer wants to book a kennel for their pet for two weeks starting today.
+
+In this scenario, the system should ideally recognize that the new customer's pet can occupy Kennel 2 until Kennel 1 becomes available the next day, then move the pet to Kennel 1. However, the current system does not allow this flexibility and only checks immediate availability.
+
+For instance, if Kennel 1 becomes available tomorrow, it should allow the reservation by suggesting Kennel 2 for the initial day and then transferring to Kennel 1.
+
+### Goal:
+The goal is to enhance the reservation system to maximize kennel usage efficiency and improve customer satisfaction by ensuring pets can be accommodated even if immediate availability is limited.
+
+Is there a way to implement these changes in the reservation system to address this issue?
+
