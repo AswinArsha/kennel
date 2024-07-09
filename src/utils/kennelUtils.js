@@ -70,3 +70,15 @@ export const updateFeedingSchedule = async (sourceId, destinationId) => {
 
   if (updateError) throw updateError;
 };
+
+export const getReservationByKennelId = async (kennelId) => {
+  const { data, error } = await supabase
+    .from("reservations")
+    .select("pet_name")
+    .contains("kennel_ids", [kennelId])
+    .single();
+
+  if (error) throw error;
+
+  return data;
+};

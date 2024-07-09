@@ -1,21 +1,19 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../supabase";
-import {
-  FaTimes,
-  FaEdit,
-  FaCheck,
-  FaDownload,
-  FaSpinner,
-} from "react-icons/fa";
+import { FaTimes, FaCheck, FaDownload, FaSpinner, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import Modal from "react-modal";
 import { Tabs, TabList, Tab, TabPanel } from "react-tabs";
 import "react-tabs/style/react-tabs.css";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
+import ReactDatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const customStyles = {
   overlay: {
-    backgroundColor: "rgba(0, 0, 0, 0.7)", // Slightly darker overlay
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
     zIndex: "1000",
   },
   content: {
@@ -26,17 +24,121 @@ const customStyles = {
     marginRight: "-50%",
     transform: "translate(-50%, -50%)",
     padding: "0",
-    borderRadius: "12px", // Increased border radius
-    maxWidth: "900px",
-    width: "50%",
-    maxHeight: "90vh",
-    height: "80%",
+    borderRadius: "12px",
+    maxWidth: "1200px",
+    width: "80%",
+    height: "96%",
     overflow: "auto",
-    transition: "all 0.3s ease-in-out", // Added transition for smooth modal animation
+    transition: "all 0.3s ease-in-out",
   },
 };
 
-const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
+const moveDialogStyles = {
+  overlay: {
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    zIndex: "1000",
+  },
+  content: {
+    top: "50%",
+    left: "50%",
+    right: "auto",
+    bottom: "auto",
+    marginRight: "-50%",
+    transform: "translate(-50%, -50%)",
+    padding: "0",
+    borderRadius: "12px",
+    maxWidth: "600px",
+    width: "50%",
+    overflow: "auto",
+    transition: "all 0.3s ease-in-out",
+  },
+};
+
+const Button2 = ({ content, onClick, active, disabled }) => {
+  return (
+    <button
+      className={`flex flex-col cursor-pointer items-center justify-center w-10 h-10 shadow-[0_4px_10px_rgba(0,0,0,0.1)] text-sm font-medium transition-colors rounded-lg
+      ${active ? "bg-blue-600 text-white" : "text-blue-600"}
+      ${
+        !disabled
+          ? "bg-white hover:bg-blue-600 hover:text-white"
+          : "text-blue-300 bg-gray-100 cursor-not-allowed"
+      }
+      `}
+      onClick={onClick}
+      disabled={disabled}
+      style={{ 
+        backgroundColor: active ? "rgba(59, 130, 246, 1)" : "white", 
+        color: active ? "white" : "rgba(59, 130, 246, 1)" 
+      }}
+    >
+      {content}
+    </button>
+  );
+};
+
+const PaginationNav1 = ({ gotoPage, canPreviousPage, canNextPage, pageCount, pageIndex }) => {
+  const renderPageLinks = () => {
+    if (pageCount === 0) return null;
+    const visiblePageButtonCount = 3;
+    let numberOfButtons = pageCount < visiblePageButtonCount ? pageCount : visiblePageButtonCount;
+    const pageIndices = [pageIndex];
+    numberOfButtons--;
+    [...Array(numberOfButtons)].forEach((_item, itemIndex) => {
+      const pageNumberBefore = pageIndices[0] - 1;
+      const pageNumberAfter = pageIndices[pageIndices.length - 1] + 1;
+      if (pageNumberBefore >= 0 && (itemIndex < numberOfButtons / 2 || pageNumberAfter > pageCount - 1)) {
+        pageIndices.unshift(pageNumberBefore);
+      } else {
+        pageIndices.push(pageNumberAfter);
+      }
+    });
+    return pageIndices.map((pageIndexToMap) => (
+      <li key={pageIndexToMap}>
+        <Button2 content={pageIndexToMap + 1} onClick={() => gotoPage(pageIndexToMap)} active={pageIndex === pageIndexToMap} />
+      </li>
+    ));
+  };
+
+  return (
+    <ul className="flex gap-2 justify-center mt-4">
+      <li>
+        <Button2
+          content={
+            <div className="flex">
+              <FaChevronLeft size="0.6rem" />
+              <FaChevronLeft size="0.6rem" className="-translate-x-1/2" />
+            </div>
+          }
+          onClick={() => gotoPage(0)}
+          disabled={!canPreviousPage}
+        />
+      </li>
+      {renderPageLinks()}
+      <li>
+        <Button2
+          content={
+            <div className="flex">
+              <FaChevronRight size="0.6rem" />
+              <FaChevronRight size="0.6rem" className="-translate-x-1/2" />
+            </div>
+          }
+          onClick={() => gotoPage(pageCount - 1)}
+          disabled={!canNextPage}
+        />
+      </li>
+    </ul>
+  );
+};
+
+const CustomerDetailDialog = ({
+  customer,
+  isOpen,
+  onClose,
+  currentPage,
+  setCurrentPage,
+  totalPages,
+}) => {
   const [customerDetail, setCustomerDetail] = useState({
     customer_name: "",
     customer_phone: "",
@@ -48,6 +150,10 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
   const [filteredFeedings, setFilteredFeedings] = useState([]);
   const [kennelNumber, setKennelNumber] = useState("");
   const [isDownloadingPDF, setIsDownloadingPDF] = useState(false);
+  const [overlappingReservations, setOverlappingReservations] = useState([]);
+  const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
+  const [availableKennels, setAvailableKennels] = useState([]);
+  const [selectedReservation, setSelectedReservation] = useState(null);
 
   useEffect(() => {
     if (customer) {
@@ -58,7 +164,7 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
   useEffect(() => {
     const fetchCustomerDetail = async () => {
       if (customer) {
-        const { data: reservation, error: reservationError } = await supabase
+        const { data: reservations, error: reservationError } = await supabase
           .from("reservations")
           .select(
             `
@@ -76,8 +182,8 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
             )
           `
           )
-          .eq("kennel_ids", `{${customer.id}}`) // Filter by kennel ID
-          .single();
+          .contains("kennel_ids", [customer.id])
+          .order("start_date", { ascending: true }); // Order by start date
 
         if (reservationError) {
           console.error(
@@ -85,42 +191,49 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
             reservationError.message
           );
         } else {
-          const {
-            pet_name,
-            pet_breed,
-            start_date,
-            end_date,
-            pickup,
-            groom,
-            drop,
-            pet_information,
-            customers,
-          } = reservation;
+          const pets = reservations.map((reservation) => {
+            const {
+              pet_name,
+              pet_breed,
+              start_date,
+              end_date,
+              pickup,
+              groom,
+              drop,
+              pet_information,
+              customers,
+            } = reservation;
+
+            return {
+              pet_name,
+              pet_breed,
+              start_date,
+              end_date,
+              pickup,
+              groom,
+              drop,
+              ...pet_information[0],
+              customer_name: customers.customer_name,
+              customer_phone: customers.customer_phone,
+              customer_address: customers.customer_address,
+            };
+          });
 
           setCustomerDetail({
-            customer_name: customers.customer_name,
-            customer_phone: customers.customer_phone,
-            customer_address: customers.customer_address,
-            pets: [
-              {
-                pet_name,
-                pet_breed,
-                start_date,
-                end_date,
-                pickup,
-                groom,
-                drop,
-                ...pet_information[0],
-              },
-            ],
+            customer_name: pets[currentPage]?.customer_name || "",
+            customer_phone: pets[currentPage]?.customer_phone || "",
+            customer_address: pets[currentPage]?.customer_address || "",
+            pets: [pets[currentPage]],
             kennel_numbers: [customer.kennel_number],
           });
+
+          setOverlappingReservations(reservations);
         }
       }
     };
 
     fetchCustomerDetail();
-  }, [customer]);
+  }, [customer, currentPage]);
 
   useEffect(() => {
     const fetchFeedingSchedule = async () => {
@@ -176,33 +289,147 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
       startY: 40,
       head: [["Date", "Morning", "Noon"]],
       body: tableData,
-      theme: "striped", // Add striped theme for better readability
+      theme: "striped",
       headStyles: {
-        fillColor: [100, 100, 255], // Set header background color to a subtle blue
-        textColor: [255, 255, 255], // Set header text color to white
-        fontSize: 14, // Set header font size
-        fontStyle: "bold", // Make header text bold
-        halign: "center", // Center-align header text
+        fillColor: [100, 100, 255],
+        textColor: [255, 255, 255],
+        fontSize: 14,
+        fontStyle: "bold",
+        halign: "center",
       },
       bodyStyles: {
-        fontSize: 12, // Set body font size
-        cellPadding: 6, // Add cell padding for better readability
+        fontSize: 12,
+        cellPadding: 6,
       },
       alternateRowStyles: {
-        fillColor: [240, 240, 255], // Set alternate row background color for better readability
+        fillColor: [240, 240, 255],
       },
       styles: {
-        lineColor: [200, 200, 200], // Set border color
-        lineWidth: 0.1, // Set border width
-        font: "helvetica", // Set font to helvetica
-        fontStyle: "normal", // Set font style to normal
-        overflow: "linebreak", // Enable line breaking for text overflow
+        lineColor: [200, 200, 200],
+        lineWidth: 0.1,
+        font: "helvetica",
+        fontStyle: "normal",
+        overflow: "linebreak",
       },
-      margin: { top: 40, right: 20, bottom: 20, left: 20 }, // Add margins for better spacing
+      margin: { top: 40, right: 20, bottom: 20, left: 20 },
     });
 
     doc.save("feeding_information.pdf");
     setIsDownloadingPDF(false);
+  };
+
+  const handleMoveReservation = async (reservationId, newKennelId) => {
+    try {
+      await supabase
+        .from("reservations")
+        .update({ kennel_ids: [newKennelId] })
+        .eq("id", reservationId);
+
+      // Update status of the new kennel based on the status of the original kennel
+      const { data: newKennel, error: kennelError } = await supabase
+        .from("kennels")
+        .select("*")
+        .eq("id", newKennelId)
+        .single();
+
+      const { data: originalKennel, error: originalKennelError } = await supabase
+        .from("kennels")
+        .select("status")
+        .eq("id", customer.id)
+        .single();
+
+      if (kennelError || originalKennelError) {
+        console.error("Error fetching kennel details:", kennelError?.message || originalKennelError?.message);
+      } else {
+        const newStatus = originalKennel.status === "occupied" ? "occupied" : "reserved";
+        await supabase
+          .from("kennels")
+          .update({ status: newStatus })
+          .eq("id", newKennelId);
+      }
+
+      // Update status of the original kennel to "available" if it's empty
+      const { data: originalKennelReservations, error: originalKennelReservationError } =
+        await supabase
+          .from("reservations")
+          .select("*")
+          .contains("kennel_ids", [customer.id]);
+
+      if (originalKennelReservationError) {
+        console.error(
+          "Error fetching original kennel reservations:",
+          originalKennelReservationError.message
+        );
+      } else if (originalKennelReservations.length === 1) {
+        await supabase
+          .from("kennels")
+          .update({ status: "available" })
+          .eq("id", customer.id);
+      }
+
+      fetchOverlappingReservations();
+      toast.success("Reservation moved successfully!");
+      setIsMoveDialogOpen(false);
+      setSelectedReservation(null);
+    } catch (error) {
+      console.error("Error moving reservation:", error.message);
+      toast.error("Failed to move reservation. Please try again.");
+    }
+  };
+
+  const fetchAvailableKennels = async () => {
+    const { data: kennels, error } = await supabase
+      .from("kennels")
+      .select("*")
+      .in("status", ["available", "reserved", "occupied"])
+      .neq("id", customer.id) // Exclude the current kennel
+      .order("kennel_number", { ascending: true });
+
+    if (error) {
+      console.error("Error fetching available kennels:", error.message);
+    } else {
+      setAvailableKennels(kennels);
+    }
+  };
+
+  useEffect(() => {
+    if (isMoveDialogOpen) {
+      fetchAvailableKennels();
+    }
+  }, [isMoveDialogOpen]);
+
+  const fetchOverlappingReservations = async () => {
+    if (customer) {
+      const { data: reservations, error: reservationError } = await supabase
+        .from("reservations")
+        .select(
+          `
+          *,
+          pet_information (
+            id,
+            dietary_requirements,
+            special_care_instructions,
+            medical_notes
+          ),
+          customers:customer_id (
+            customer_name,
+            customer_phone,
+            customer_address
+          )
+        `
+        )
+        .contains("kennel_ids", [customer.id])
+        .order("start_date", { ascending: true });
+
+      if (reservationError) {
+        console.error(
+          "Error fetching reservation details:",
+          reservationError.message
+        );
+      } else {
+        setOverlappingReservations(reservations);
+      }
+    }
   };
 
   return (
@@ -213,11 +440,14 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
       contentLabel="Customer Details"
       ariaHideApp={false}
     >
-      <div className="bg-white p-8  ">
-        <div className="flex justify-between items-center mb-8">
-          <h2 className="text-2xl font-bold text-gray-800">{kennelNumber}</h2>
+      <ToastContainer position="bottom-right" autoClose={3000} hideProgressBar={false} />
+      <div className="bg-white p-8">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-bold text-gray-800 text-center -mt-5 mb-4 w-full">
+            {kennelNumber}
+          </h2>
           <button
-            className="text-gray-600 hover:text-gray-900 focus:outline-none transition-colors duration-300"
+            className="text-gray-600 hover:text-gray-900 focus:outline-none transition-colors duration-300 absolute right-4 top-4"
             onClick={onClose}
           >
             <FaTimes className="h-6 w-6" />
@@ -225,18 +455,12 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
         </div>
 
         <Tabs>
-          <TabList className="flex  border-b border-gray-300">
+          <TabList className="flex border-b border-gray-300">
             <Tab
               className="px-4 py-2 rounded-t-lg text-gray-600 cursor-pointer hover:text-gray-800 transition-colors duration-300"
               selectedClassName="bg-blue-500 text-white"
             >
-              Pet Information
-            </Tab>
-            <Tab
-              className="px-4 py-2 rounded-t-lg text-gray-600 cursor-pointer hover:text-gray-800 transition-colors duration-300"
-              selectedClassName="bg-blue-500 text-white"
-            >
-              Customer Information
+              Reservation Details
             </Tab>
             <Tab
               className="px-4 py-2 rounded-t-lg text-gray-600 cursor-pointer hover:text-gray-800 transition-colors duration-300"
@@ -244,148 +468,131 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
             >
               Feeding Information
             </Tab>
+            <Tab
+              className="px-4 py-2 rounded-t-lg text-gray-600 cursor-pointer hover:text-gray-800 transition-colors duration-300"
+              selectedClassName="bg-blue-500 text-white"
+            >
+              Kennel Assignment
+            </Tab>
           </TabList>
-          <TabPanel className={"mt-6"}>
-            <div className="flex flex-wrap gap-6">
-              {customerDetail.pets && customerDetail.pets.length > 0 ? (
-                customerDetail.pets.map((pet) => (
-                  <div key={pet.pet_name} className="">
-                    <div className="flex gap-4">
-                      <div className="p-4 border rounded-md bg-gray-100 text-gray-800 w-72">
-                        <h3 className="text-lg font-semibold text-gray-700 mb-2">
-                          Pet Details
-                        </h3>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Pet Name:</span>
-                          <span>{pet.pet_name}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Pet Breed:</span>
-                          <span>{pet.pet_breed}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Check In:</span>
-                          <span>{pet.start_date}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Check Out:</span>
-                          <span>{pet.end_date}</span>
-                        </div>
-                      </div>
-
-                      <div className="p-4 border rounded-md bg-gray-100 text-gray-800 w-72">
-                        <h3 className="text-lg font-semibold text-gray-700 mb-2">
-                          Service Details
-                        </h3>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Pickup:</span>
-                          {pet.pickup ? (
-                            <span className="text-green-500">
-                              <FaCheck className="text-green-500" />
-                            </span>
-                          ) : (
-                            <span className="text-red-500">
-                              <FaTimes className="text-red-500" />
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Groom:</span>
-                          {pet.groom ? (
-                            <span className="text-green-500">
-                              <FaCheck className="text-green-500" />
-                            </span>
-                          ) : (
-                            <span className="text-red-500">
-                              <FaTimes className="text-red-500" />
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Drop:</span>
-                          {pet.drop ? (
-                            <span className="text-green-500">
-                              <FaCheck className="text-green-500" />
-                            </span>
-                          ) : (
-                            <span className="text-red-500">
-                              <FaTimes className="text-red-500" />
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="p-4 mt-4 border rounded-md bg-gray-100 text-gray-800 w-8/12">
-                      <h3 className="text-lg font-semibold text-gray-700 mb-2">
-                        Additional Details
-                      </h3>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">
-                          Dietary Requirements:
-                        </span>
-                        <span>{pet.dietary_requirements || "N/A"}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">
-                          Special Care Instructions:
-                        </span>
-                        <span>{pet.special_care_instructions || "N/A"}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Medical Notes:</span>
-                        <span>{pet.medical_notes || "N/A"}</span>
-                      </div>
-                    </div>
+          <TabPanel className="mt-6">
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="p-4 border rounded-md bg-gray-100 text-gray-800 shadow-md">
+                  <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                    Customer Details
+                  </h3>
+                  <div className="mb-2 flex justify-between">
+                    <span className="font-bold text-gray-600">Name:</span>
+                    <span>{customerDetail.customer_name}</span>
                   </div>
-                ))
-              ) : (
-                <p className="text-gray-600">No pet information available.</p>
-              )}
-            </div>
-          </TabPanel>
-
-          <TabPanel>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div>
-                <div className="mb-6">
-                  <label className="block text-lg font-semibold text-gray-800 mb-2">
-                    Name
-                  </label>
-                  <div className="p-3 rounded-lg bg-gray-100 text-gray-700 shadow-sm">
-                    {customerDetail.customer_name}
+                  <div className="mb-2 flex justify-between">
+                    <span className="font-bold text-gray-600">Phone:</span>
+                    <span>{customerDetail.customer_phone}</span>
+                  </div>
+                  <div className="mb-2 flex justify-between">
+                    <span className="font-bold text-gray-600">Address:</span>
+                    <span>{customerDetail.customer_address}</span>
                   </div>
                 </div>
-                <div className="mb-6">
-                  <label className="block text-lg font-semibold text-gray-800 mb-2">
-                    Phone
-                  </label>
-                  <div className="p-3 rounded-lg bg-gray-100 text-gray-700 shadow-sm">
-                    {customerDetail.customer_phone}
+                <div className="p-4 border rounded-md bg-gray-100 text-gray-800 shadow-md">
+                  <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                    Service Details
+                  </h3>
+                  <div className="mb-2 flex justify-between items-center">
+                    <span className="font-bold text-gray-600">Pickup:</span>
+                    {customerDetail.pets[0]?.pickup ? (
+                      <FaCheck className="text-green-500 ml-2" />
+                    ) : (
+                      <FaTimes className="text-red-500 ml-2" />
+                    )}
+                  </div>
+                  <div className="mb-2 flex justify-between items-center">
+                    <span className="font-bold text-gray-600">Groom:</span>
+                    {customerDetail.pets[0]?.groom ? (
+                      <FaCheck className="text-green-500 ml-2" />
+                    ) : (
+                      <FaTimes className="text-red-500 ml-2" />
+                    )}
+                  </div>
+                  <div className="mb-2 flex justify-between items-center">
+                    <span className="font-bold text-gray-600">Drop:</span>
+                    {customerDetail.pets[0]?.drop ? (
+                      <FaCheck className="text-green-500 ml-2" />
+                    ) : (
+                      <FaTimes className="text-red-500 ml-2" />
+                    )}
                   </div>
                 </div>
-                <div className="mb-6">
-                  <label className="block text-lg font-semibold text-gray-800 mb-2">
-                    Address
-                  </label>
-                  <div className="p-3 rounded-lg bg-gray-100 text-gray-700 shadow-sm">
-                    {customerDetail.customer_address}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="p-4 border rounded-md bg-gray-100 text-gray-800 shadow-md">
+                  <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                    Pet Details
+                  </h3>
+                  <div className="mb-2 flex justify-between">
+                    <span className="font-bold text-gray-600">Pet Name:</span>
+                    <span>{customerDetail.pets[0]?.pet_name}</span>
+                  </div>
+                  <div className="mb-2 flex justify-between">
+                    <span className="font-bold text-gray-600">Pet Breed:</span>
+                    <span>{customerDetail.pets[0]?.pet_breed}</span>
+                  </div>
+                  <div className="mb-2 flex justify-between">
+                    <span className="font-bold text-gray-600">Check In:</span>
+                    <span>{customerDetail.pets[0]?.start_date}</span>
+                  </div>
+                  <div className="mb-2 flex justify-between">
+                    <span className="font-bold text-gray-600">Check Out:</span>
+                    <span>{customerDetail.pets[0]?.end_date}</span>
+                  </div>
+                </div>
+                <div className="p-4 border rounded-md bg-gray-100 text-gray-800 shadow-md">
+                  <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                    Additional Details
+                  </h3>
+                  <div className="mb-2 flex justify-between">
+                    <span className="font-bold text-gray-600">
+                      Dietary Requirements:
+                    </span>
+                    <span>{customerDetail.pets[0]?.dietary_requirements || "N/A"}</span>
+                  </div>
+                  <div className="mb-2 flex justify-between">
+                    <span className="font-bold text-gray-600">
+                      Special Care Instructions:
+                    </span>
+                    <span>{customerDetail.pets[0]?.special_care_instructions || "N/A"}</span>
+                  </div>
+                  <div className="mb-2 flex justify-between">
+                    <span className="font-bold text-gray-600">
+                      Medical Notes:
+                    </span>
+                    <span>{customerDetail.pets[0]?.medical_notes || "N/A"}</span>
                   </div>
                 </div>
               </div>
             </div>
+            {totalPages > 1 && (
+              <PaginationNav1
+                gotoPage={setCurrentPage}
+                canPreviousPage={currentPage > 0}
+                canNextPage={currentPage < totalPages - 1}
+                pageCount={totalPages}
+                pageIndex={currentPage}
+              />
+            )}
           </TabPanel>
-          <TabPanel>
-            <div className="mt-4 over ">
+
+          <TabPanel className="mt-6">
+            <div className="mt-4">
               <div className="flex items-center mb-4">
                 <label className="mr-4 font-semibold text-gray-700">
                   Filter by Date:
                 </label>
-                <input
-                  type="date"
+                <ReactDatePicker
+                  selected={filterDate}
+                  onChange={(date) => setFilterDate(date)}
                   className="border rounded-md p-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-300"
-                  value={filterDate || ""}
-                  onChange={(e) => setFilterDate(e.target.value)}
                 />
                 <button
                   className="ml-4 bg-emerald-500 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition-colors duration-300 flex items-center"
@@ -400,7 +607,7 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
                   Download PDF
                 </button>
               </div>
-              <div className="rounded-lg  h-2 border border-gray-200 shadow-md">
+              <div className="rounded-lg border border-gray-200 shadow-md">
                 <div className="max-h-72 overflow-y-auto">
                   <table className="min-w-full divide-y divide-gray-200 bg-white text-sm">
                     <thead className="bg-gray-100 top-0 sticky text-gray-700">
@@ -428,13 +635,13 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
                             .map((feeding, index) => (
                               <tr
                                 key={index}
-                                className={`${
+                                className={`hover:bg-gray-100 transition-colors duration-300 ${
                                   index % 2 === 0
                                     ? "bg-gray-100"
-                                    : "bg-white hover:bg-gray-100 transition-colors duration-300"
-                                } hover:bg-gray-200`}
+                                    : "bg-white"
+                                }`}
                               >
-                                <td className="whitespace-nowrap  px-3 py-2">
+                                <td className="whitespace-nowrap px-3 py-2">
                                   {new Date(
                                     feeding.feeding_date
                                   ).toLocaleDateString()}
@@ -466,11 +673,9 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
                         : filteredFeedings.map((feeding, index) => (
                             <tr
                               key={index}
-                              className={`${
-                                index % 2 === 0
-                                  ? "bg-gray-100"
-                                  : "bg-white hover:bg-gray-100 transition-colors duration-300"
-                              } hover:bg-gray-200`}
+                              className={`hover:bg-gray-100 transition-colors duration-300 ${
+                                index % 2 === 0 ? "bg-gray-100" : "bg-white"
+                              }`}
                             >
                               <td className="whitespace-nowrap px-3 py-2">
                                 {new Date(
@@ -507,9 +712,143 @@ const CustomerDetailDialog = ({ customer, isOpen, onClose }) => {
               </div>
             </div>
           </TabPanel>
+
+          <TabPanel className="mt-6">
+            <div className="mt-4">
+              <div className="overflow-x-auto rounded-lg border border-gray-200">
+                <table className="min-w-full divide-y-2 divide-gray-200 bg-white text-sm">
+                  <thead className="ltr:text-left rtl:text-right">
+                    <tr>
+                      <th className="whitespace-nowrap text-center px-4 py-2 font-medium text-gray-900">
+                        Customer Name
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
+                        Phone Number
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
+                        Check-in Date
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
+                        Check-out Date
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {overlappingReservations.map((reservation, index) => (
+                      <tr
+                        key={index}
+                        className={`hover:bg-gray-100 transition-colors duration-300 ${
+                          index % 2 === 0 ? "bg-gray-100" : "bg-white"
+                        }`}
+                      >
+                        <td className="whitespace-nowrap px-4 text-center py-2 font-medium text-gray-900">
+                          {reservation.customers.customer_name}
+                        </td>
+                        <td className="whitespace-nowrap px-4  text-center py-2 text-gray-700">
+                          {reservation.customers.customer_phone}
+                        </td>
+                        <td className="whitespace-nowrap px-4 text-center py-2 text-gray-700">
+                          {new Date(reservation.start_date).toLocaleDateString()}
+                        </td>
+                        <td className="whitespace-nowrap px-4 text-center py-2 text-gray-700">
+                          {new Date(reservation.end_date).toLocaleDateString()}
+                        </td>
+                        <td className="whitespace-nowrap px-4 text-center py-2 text-gray-700">
+                          <button
+                            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition-colors duration-300"
+                            onClick={() => {
+                              setSelectedReservation(reservation);
+                              setIsMoveDialogOpen(true);
+                            }}
+                          >
+                            Move
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </TabPanel>
         </Tabs>
+
+        {isMoveDialogOpen && (
+          <Modal
+            isOpen={isMoveDialogOpen}
+            onRequestClose={() => setIsMoveDialogOpen(false)}
+            style={moveDialogStyles}
+            contentLabel="Move Reservation"
+            ariaHideApp={false}
+          >
+            <div className="bg-white p-8">
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-bold text-gray-800 mb-4">
+                  Move Reservation
+                </h2>
+                <button
+                  className="text-gray-600 hover:text-gray-900 focus:outline-none transition-colors duration-300"
+                  onClick={() => setIsMoveDialogOpen(false)}
+                >
+                  <FaTimes className="h-6 w-6" />
+                </button>
+              </div>
+              <div className="max-h-72 overflow-y-auto">
+                <table className="min-w-full divide-y divide-gray-200 bg-white text-sm">
+                  <thead className="bg-gray-100 top-0 sticky text-gray-700">
+                    <tr>
+                      <th className="whitespace-nowrap px-3 py-2 font-semibold">
+                        Kennel Number
+                      </th>
+                      <th className="whitespace-nowrap px-3 py-2 font-semibold">
+                        Status
+                      </th>
+                      <th className="whitespace-nowrap px-3 py-2 font-semibold">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {availableKennels.map((kennel, index) => (
+                      <tr
+                        key={index}
+                        className={`hover:bg-gray-100 transition-colors duration-300 ${
+                          index % 2 === 0 ? "bg-gray-100" : "bg-white"
+                        }`}
+                      >
+                        <td className="whitespace-nowrap text-center px-3 py-2">
+                          {kennel.kennel_number}
+                        </td>
+                        <td className="whitespace-nowrap text-center px-3 py-2">
+                          {kennel.status}
+                        </td>
+                        <td className="whitespace-nowrap text-center px-3 py-2">
+                          <button
+                            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition-colors duration-300"
+                            onClick={() =>
+                              handleMoveReservation(
+                                selectedReservation.id,
+                                kennel.id
+                              )
+                            }
+                          >
+                            Move Here
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </Modal>
+        )}
       </div>
     </Modal>
   );
 };
+
 export default CustomerDetailDialog;

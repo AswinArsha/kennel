@@ -79,7 +79,7 @@ const CalendarView = () => {
     const { event } = info;
     try {
       const newStartDate = new Date(Date.UTC(event.start.getFullYear(), event.start.getMonth(), event.start.getDate()));
-      const newEndDate = new Date(Date.UTC(event.end.getFullYear(), event.end.getMonth(), event.end.getDate(), 23, 59, 59, 999));
+      const newEndDate = new Date(Date.UTC(event.end.getFullYear(), event.end.getMonth(), event.end.getDate() - 1, 23, 59, 59, 999));
 
       await supabase
         .from('reservations')

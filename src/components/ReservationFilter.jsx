@@ -75,7 +75,7 @@ const ReservationFilter = ({
           >
             <option value="">All Status</option>
             <option value="reserved">Reserved</option>
-            <option value="confirmed">Confirmed</option>
+            <option value="checkin">Check In</option>
           </select>
           <FaFilter className="absolute top-1/2 left-3 transform -translate-y-1/2 text-gray-400" />
         </div>

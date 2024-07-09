@@ -12,7 +12,6 @@ import { useSearchParams } from 'react-router-dom';
 const petBreeds = [
   "Affenpinscher",
   "Šarplaninac",
-  // ... other breeds ...
 ];
 
 const ReservationForm = () => {
@@ -88,32 +87,38 @@ const ReservationForm = () => {
   };
 
   const fetchAvailableKennels = async () => {
-    if (!startDate || !endDate) return;
+    const { data: kennels, error: kennelError } = await supabase
+      .from("kennels")
+      .select("*")
+      .neq("set_name", "Maintenance")
+      .order("created_at", { ascending: true });
+
+    if (kennelError) {
+      console.error("Error fetching kennels:", kennelError.message);
+      return;
+    }
 
     const { data: reservations, error: reservationError } = await supabase
       .from("reservations")
-      .select("kennel_ids, start_date, end_date")
-      .or(`and(start_date.lte.${endDate.toISOString()},end_date.gte.${startDate.toISOString()})`);
+      .select("kennel_ids, start_date, end_date");
 
     if (reservationError) {
       console.error("Error fetching reservations:", reservationError.message);
       return;
     }
 
-    const reservedKennelIds = reservations.flatMap(r => r.kennel_ids);
+    const availableKennels = kennels.filter((kennel) => {
+      const conflictingReservations = reservations.filter((reservation) => {
+        return (
+          reservation.kennel_ids.includes(kennel.id) &&
+          new Date(reservation.start_date).toDateString() === new Date(startDate).toDateString() &&
+          new Date(reservation.end_date).toDateString() === new Date(endDate).toDateString()
+        );
+      });
+      return conflictingReservations.length === 0;
+    });
 
-    const { data: kennels, error: kennelError } = await supabase
-      .from("kennels")
-      .select("*")
-      .not("id", "in", `(${reservedKennelIds.join(",")})`)
-      .neq("set_name", "Maintenance")
-      .order("created_at", { ascending: true });
-
-    if (kennelError) {
-      console.error("Error fetching kennels:", kennelError.message);
-    } else {
-      setAvailableKennels(kennels);
-    }
+    setAvailableKennels(availableKennels);
   };
 
   const createReservation = async (data) => {
@@ -163,8 +168,8 @@ const ReservationForm = () => {
             customer_id: customerData.id,
             pet_name: pet.name,
             pet_breed: pet.breed,
-            start_date: data.startDate,
-            end_date: data.endDate,
+            start_date: toUTCDate(data.startDate),
+            end_date: toUTCDate(data.endDate),
             status: reservationStatus,
             kennel_ids: [pet.kennel.id],
             pickup: pet.pickup,
@@ -190,6 +195,11 @@ const ReservationForm = () => {
       toast.success("Reservation created successfully!");
       clearForm();
     }
+  };
+
+  const toUTCDate = (date) => {
+    const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    return utcDate.toISOString();
   };
 
   const validateForm = (data) => {
@@ -453,7 +463,7 @@ const ReservationForm = () => {
           <div className="mt-8">
             <h3 className="text-lg font-semibold mb-4">Select Kennels</h3>
             {availableKennels.length === 0 && (
-              <p className="text-gray-500">No kennels available for the selected dates</p>
+              <p className="text-gray-500">No kennels available</p>
             )}
             {availableKennels.length > 0 &&
               availableKennels
@@ -471,13 +481,15 @@ const ReservationForm = () => {
                 .map((set) => (
                   <div key={set.name} className="mb-6">
                     <h4 className="text-lg font-semibold mb-2">{set.name}</h4>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
+                    <div className="grid grid-cols-8 gap-6 ">
                       {set.kennels
-                        .sort((a, b) => a.kennel_number - b.kennel_number)
+                        .sort(
+                          (a, b) => a.kennel_number - b.kennel_number
+                        )
                         .map((kennel) => (
                           <div
                             key={kennel.id}
-                            className={`p-4 text-center rounded-md cursor-pointer transition-all ${
+                            className={`p-4 text-center rounded-md cursor-pointer transition-all aspect-square ${
                               selectedKennels.includes(kennel)
                                 ? "bg-blue-500 text-white"
                                 : "bg-gray-200 hover:bg-gray-300"
@@ -518,7 +530,7 @@ const ReservationForm = () => {
 
       {isPetDialogOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
-          <div className="bg-white p-6 w-full max-w-md rounded-lg shadow-lg">
+          <div className="bg-white p-6 w-2/6 rounded-lg shadow-lg">
             <h3 className="text-lg font-bold mb-4">Enter Pet Details</h3>
             <div className="mb-4">
               <label
@@ -554,7 +566,7 @@ const ReservationForm = () => {
                 onBlur={() => setTimeout(() => setShowBreedOptions(false), 200)}
               />
               {showBreedOptions && (
-                <ul className="absolute z-10 w-full mt-1 bg-white border rounded-md border-gray-300 shadow-lg max-h-60 overflow-y-auto">
+                <ul className="absolute z-10 w-full mt-1 bg-white border rounded-md border-gray-300 shadow-lg">
                   {filteredBreeds.map((breed, index) => (
                     <li
                       key={index}
