@@ -5,7 +5,7 @@ import ReservationTable from "./ReservationTable";
 import ReservationEditModal from "./ReservationEditModal";
 import BillGenerationModal from "./BillGenerationModal";
 import { toast, ToastContainer } from "react-toastify";
-import 'react-toastify/dist/ReactToastify.css';
+import "react-toastify/dist/ReactToastify.css";
 
 const ReservationList = () => {
   const [reservations, setReservations] = useState([]);
@@ -22,7 +22,9 @@ const ReservationList = () => {
     try {
       const { data, error } = await supabase
         .from("reservations")
-        .select("*, kennel_ids, customers:customer_id (customer_name)")
+        .select(
+          "*, kennel_ids, customers:customer_id (customer_name, customer_phone)"
+        )
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -133,8 +135,6 @@ const ReservationList = () => {
     }
   };
 
-
-
   const deleteFeedingInformation = async (reservation) => {
     if (!reservation.kennel_ids || reservation.kennel_ids.length === 0) {
       return;
@@ -185,14 +185,26 @@ const ReservationList = () => {
     filterReservations(reservations, query, filterStatus, filterStartDate, filterEndDate);
   };
 
-  const filterReservations = (reservations, query = searchQuery, status = filterStatus, startDate = filterStartDate, endDate = filterEndDate) => {
+  const filterReservations = (
+    reservations,
+    query = searchQuery,
+    status = filterStatus,
+    startDate = filterStartDate,
+    endDate = filterEndDate
+  ) => {
     const lowerQuery = query.toLowerCase();
     const filtered = reservations.filter((reservation) => {
-      const matchesQuery = reservation.customers.customer_name.toLowerCase().includes(lowerQuery);
+      const matchesQuery =
+        reservation.customers.customer_name.toLowerCase().includes(lowerQuery) ||
+        reservation.pet_name.toLowerCase().includes(lowerQuery) ||
+        reservation.pet_breed.toLowerCase().includes(lowerQuery) ||
+        reservation.customers.customer_phone.toLowerCase().includes(lowerQuery);
       const matchesStatus = status ? reservation.status === status : true;
-      const matchesDate = startDate && endDate ? 
-        new Date(reservation.start_date) >= startDate &&
-        new Date(reservation.end_date) <= endDate.setHours(23, 59, 59, 999) : true;
+      const matchesDate =
+        startDate && endDate
+          ? new Date(reservation.start_date) >= startDate &&
+            new Date(reservation.end_date) <= endDate.setHours(23, 59, 59, 999)
+          : true;
       return matchesQuery && matchesStatus && matchesDate && reservation.status !== "canceled";
     });
     setFilteredReservations(filtered);
@@ -211,7 +223,7 @@ const ReservationList = () => {
 
   return (
     <div>
-      <ToastContainer autoClose={2000}/>
+      <ToastContainer position="bottom-center" autoClose={2000} hideProgressBar={false} />
       <h2 className="text-2xl font-bold mb-4">Reservation List</h2>
       <ReservationFilter
         searchQuery={searchQuery}

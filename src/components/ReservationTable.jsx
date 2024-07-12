@@ -70,6 +70,15 @@ const ReservationTable = ({
               Customer Name
             </th>
             <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
+              Phone Number
+            </th>
+            <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
+              Pet Name
+            </th>
+            <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
+              Pet Breed
+            </th>
+            <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
               Reservation Date
             </th>
             <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
@@ -106,6 +115,15 @@ const ReservationTable = ({
               </td>
               <td className="whitespace-nowrap px-4 text-center py-2 font-medium text-gray-900">
                 {reservation.customers.customer_name}
+              </td>
+              <td className="whitespace-nowrap px-4 text-center py-2 text-gray-700">
+                {reservation.customers.customer_phone}
+              </td>
+              <td className="whitespace-nowrap px-4 text-center py-2 text-gray-700">
+                {reservation.pet_name}
+              </td>
+              <td className="whitespace-nowrap px-4 text-center py-2 text-gray-700">
+                {reservation.pet_breed}
               </td>
               <td className="whitespace-nowrap px-4 text-center py-2 text-gray-700">
                 {new Date(reservation.created_at).toDateString()}

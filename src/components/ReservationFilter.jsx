@@ -36,7 +36,7 @@ const ReservationFilter = ({
         <input
           type="text"
           className="p-3 pl-10 pr-4 border rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Search by customer name"
+          placeholder="Search by customer name, pet name, breed, or phone number"
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
         />

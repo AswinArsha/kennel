@@ -38,13 +38,14 @@ const FeedingSchedule = () => {
       .eq("feeding_date", formatDate(date))
       .eq("feeding_time", time)
       .eq("fed", true);
-
+  
     if (error) {
       console.error("Error fetching fed kennels:", error.message);
     } else {
       setFedKennels(fedKennelsData.map((data) => data.kennel_id));
     }
   };
+  
 
   const handleSubmit = async () => {
     const feedingRecords = selectedKennels.map((kennel) => ({

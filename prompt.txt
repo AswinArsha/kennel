@@ -8,7 +8,7 @@ import jsPDF from "jspdf";
 import "jspdf-autotable";
 import ReactDatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { toast } from "react-toastify";
+import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 const customStyles = {
@@ -183,7 +183,7 @@ const CustomerDetailDialog = ({
           `
           )
           .contains("kennel_ids", [customer.id])
-          .order("start_date", { ascending: true }); // Order by start date
+          .order("start_date", { ascending: true });
 
         if (reservationError) {
           console.error(
@@ -191,7 +191,14 @@ const CustomerDetailDialog = ({
             reservationError.message
           );
         } else {
-          const pets = reservations.map((reservation) => {
+          // Sort the reservations by status: 'checkin' first, then 'reserved'
+          const sortedReservations = reservations.sort((a, b) => {
+            if (a.status === 'checkin' && b.status === 'reserved') return -1;
+            if (a.status === 'reserved' && b.status === 'checkin') return 1;
+            return 0;
+          });
+
+          const pets = sortedReservations.map((reservation) => {
             const {
               pet_name,
               pet_breed,
@@ -227,7 +234,7 @@ const CustomerDetailDialog = ({
             kennel_numbers: [customer.kennel_number],
           });
 
-          setOverlappingReservations(reservations);
+          setOverlappingReservations(sortedReservations);
         }
       }
     };
@@ -320,53 +327,94 @@ const CustomerDetailDialog = ({
 
   const handleMoveReservation = async (reservationId, newKennelId) => {
     try {
-      await supabase
+      // Get the current status of the new kennel
+      const { data: newKennel, error: newKennelError } = await supabase
+        .from("kennels")
+        .select("status")
+        .eq("id", newKennelId)
+        .single();
+
+      if (newKennelError) throw newKennelError;
+
+      // Get the current status of the original kennel
+      const { data: originalKennel, error: originalKennelError } = await supabase
+        .from("kennels")
+        .select("status")
+        .eq("id", customer.id)
+        .single();
+
+      if (originalKennelError) throw originalKennelError;
+
+      // Determine the new status for the selected kennel
+      let newStatus = newKennel.status;
+      if (newKennel.status === 'available' || (newKennel.status === 'reserved' && originalKennel.status === 'occupied')) {
+        newStatus = originalKennel.status;
+      }
+
+      // Update the reservation with the new kennel ID
+      const { error: updateReservationError } = await supabase
         .from("reservations")
         .update({ kennel_ids: [newKennelId] })
         .eq("id", reservationId);
 
-      // Update status of the new kennel to "reserved" if it's available
-      const { data: newKennel, error: kennelError } = await supabase
+      if (updateReservationError) throw updateReservationError;
+
+      // Update the status of the new kennel
+      const { error: updateNewKennelError } = await supabase
         .from("kennels")
-        .select("*")
-        .eq("id", newKennelId)
-        .single();
+        .update({ status: newStatus })
+        .eq("id", newKennelId);
 
-      if (kennelError) {
-        console.error("Error fetching new kennel details:", kennelError.message);
-      } else if (newKennel.status === "available") {
-        await supabase
+      if (updateNewKennelError) throw updateNewKennelError;
+
+      // Check if the original kennel is now empty
+      const { data: remainingReservations, error: remainingReservationsError } = await supabase
+        .from("reservations")
+        .select("id")
+        .contains("kennel_ids", [customer.id]);
+
+      if (remainingReservationsError) throw remainingReservationsError;
+
+      if (remainingReservations.length === 0) {
+        // Update the status of the original kennel to 'available'
+        const { error: updateOriginalKennelError } = await supabase
           .from("kennels")
-          .update({ status: "reserved" })
-          .eq("id", newKennelId);
-      }
+          .update({ status: 'available' })
+          .eq("id", customer.id);
 
-      // Update status of the original kennel to "available" if it's empty
-      const { data: originalKennelReservations, error: originalKennelError } =
-        await supabase
+        if (updateOriginalKennelError) throw updateOriginalKennelError;
+      } else {
+        // Check the status of remaining reservations and update the kennel status accordingly
+        const remainingStatuses = await supabase
           .from("reservations")
-          .select("*")
+          .select("status")
           .contains("kennel_ids", [customer.id]);
 
-      if (originalKennelError) {
-        console.error(
-          "Error fetching original kennel reservations:",
-          originalKennelError.message
-        );
-      } else if (originalKennelReservations.length === 1) {
-        await supabase
+        const hasCheckin = remainingStatuses.data.some((res) => res.status === "checkin");
+        const hasReserved = remainingStatuses.data.some((res) => res.status === "reserved");
+
+        let originalKennelStatus = "available";
+        if (hasCheckin) {
+          originalKennelStatus = "occupied";
+        } else if (hasReserved) {
+          originalKennelStatus = "reserved";
+        }
+
+        const { error: updateOriginalKennelStatusError } = await supabase
           .from("kennels")
-          .update({ status: "available" })
+          .update({ status: originalKennelStatus })
           .eq("id", customer.id);
+
+        if (updateOriginalKennelStatusError) throw updateOriginalKennelStatusError;
       }
 
       fetchOverlappingReservations();
-      toast.success("Reservation moved successfully!");
+      toast.success("Reservation moved successfully!", { position: "bottom-center" });
       setIsMoveDialogOpen(false);
       setSelectedReservation(null);
     } catch (error) {
       console.error("Error moving reservation:", error.message);
-      toast.error("Failed to move reservation. Please try again.");
+      toast.error("Failed to move reservation. Please try again.", { position: "bottom-center" });
     }
   };
 
@@ -718,6 +766,12 @@ const CustomerDetailDialog = ({
                         Phone Number
                       </th>
                       <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
+                        Pet Name
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
+                        Pet Breed
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
                         Check-in Date
                       </th>
                       <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
@@ -739,8 +793,14 @@ const CustomerDetailDialog = ({
                         <td className="whitespace-nowrap px-4 text-center py-2 font-medium text-gray-900">
                           {reservation.customers.customer_name}
                         </td>
-                        <td className="whitespace-nowrap px-4  text-center py-2 text-gray-700">
+                        <td className="whitespace-nowrap px-4 text-center py-2 text-gray-700">
                           {reservation.customers.customer_phone}
+                        </td>
+                        <td className="whitespace-nowrap px-4 text-center py-2 text-gray-700">
+                          {reservation.pet_name}
+                        </td>
+                        <td className="whitespace-nowrap px-4 text-center py-2 text-gray-700">
+                          {reservation.pet_breed}
                         </td>
                         <td className="whitespace-nowrap px-4 text-center py-2 text-gray-700">
                           {new Date(reservation.start_date).toLocaleDateString()}
@@ -842,10 +902,189 @@ const CustomerDetailDialog = ({
     </Modal>
   );
 };
-
 export default CustomerDetailDialog;
 ,
+import { useState, useEffect } from "react";
+import { supabase } from "../supabase";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import { FaCheck, FaTimes } from "react-icons/fa";
 
+const formatDate = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const FeedingSchedule = () => {
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [feedingTime, setFeedingTime] = useState("morning");
+  const [occupiedKennels, setOccupiedKennels] = useState([]);
+  const [fedKennels, setFedKennels] = useState([]);
+  const [selectedKennels, setSelectedKennels] = useState([]);
+
+  const fetchOccupiedKennels = async (date) => {
+    const { data: occupiedKennelsData, error } = await supabase
+      .from("kennels")
+      .select("*")
+      .eq("status", "occupied");
+
+    if (error) {
+      console.error("Error fetching kennels:", error.message);
+    } else {
+      setOccupiedKennels(occupiedKennelsData);
+    }
+  };
+
+  const fetchFedKennels = async (date, time) => {
+    const { data: fedKennelsData, error } = await supabase
+      .from("feeding_schedule")
+      .select("kennel_id")
+      .eq("feeding_date", formatDate(date))
+      .eq("feeding_time", time)
+      .eq("fed", true);
+
+    if (error) {
+      console.error("Error fetching fed kennels:", error.message);
+    } else {
+      setFedKennels(fedKennelsData.map((data) => data.kennel_id));
+    }
+  };
+
+  const handleSubmit = async () => {
+    const feedingRecords = selectedKennels.map((kennel) => ({
+      kennel_id: kennel.id,
+      feeding_date: formatDate(selectedDate),
+      feeding_time: feedingTime,
+      fed: true,
+      eaten: true,
+    }));
+
+    const { error } = await supabase.from("feeding_schedule").insert(feedingRecords);
+
+    if (error) {
+      console.error("Error inserting feeding status:", error.message);
+    } else {
+      // Reset state after successful submission
+      setSelectedKennels([]);
+      fetchFedKennels(selectedDate, feedingTime);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedDate) {
+      fetchOccupiedKennels(selectedDate);
+      fetchFedKennels(selectedDate, feedingTime);
+    }
+  }, [selectedDate, feedingTime]);
+
+  const toggleKennelSelection = (kennel) => {
+    setSelectedKennels((prevSelectedKennels) => {
+      if (prevSelectedKennels.includes(kennel)) {
+        return prevSelectedKennels.filter((k) => k !== kennel);
+      } else {
+        return [...prevSelectedKennels, kennel];
+      }
+    });
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto p-4">
+      <h2 className="text-3xl font-semibold mb-6">Feeding Schedule Tracker</h2>
+
+      <div className="flex flex-col sm:flex-row gap-4 items-center mb-6">
+        <DatePicker
+          selected={selectedDate}
+          onChange={(date) => setSelectedDate(date)}
+          dateFormat="yyyy/MM/dd"
+          placeholderText="Select date"
+          className="border border-gray-300 p-2 rounded-lg focus:ring-2 focus:ring-blue-500"
+        />
+
+        <select
+          value={feedingTime}
+          onChange={(e) => setFeedingTime(e.target.value)}
+          className="border border-gray-300 p-2 rounded-lg focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="morning">Morning</option>
+          <option value="noon">Noon</option>
+        </select>
+      </div>
+
+      {selectedDate && (
+        <div>
+          <h3 className="text-xl font-medium mb-4">Occupied Kennels</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {occupiedKennels.reduce((acc, kennel) => {
+              const setIndex = acc.findIndex(
+                (item) => item.name === kennel.set_name
+              );
+              if (setIndex === -1) {
+                acc.push({ name: kennel.set_name, kennels: [kennel] });
+              } else {
+                acc[setIndex].kennels.push(kennel);
+              }
+              return acc;
+            }, []).map((set) => (
+              <div key={set.name}>
+                <h4 className="text-lg font-semibold mb-2">{set.name}</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  {set.kennels.map((kennel) => (
+                    <div
+                      key={kennel.id}
+                      className={`p-4 text-center rounded-lg cursor-pointer transition-all shadow-md ${
+                        fedKennels.includes(kennel.id)
+                          ? "bg-green-500 text-white"
+                          : selectedKennels.includes(kennel)
+                          ? "bg-blue-500 text-white"
+                          : "bg-gray-200 hover:bg-gray-300"
+                      }`}
+                      onClick={() => toggleKennelSelection(kennel)}
+                    >
+                      <div className="flex flex-col items-center">
+                        {fedKennels.includes(kennel.id) ? (
+                          <>
+                           
+                            <span className="whitespace-nowrap rounded-full bg-green-100 mb-2 px-2.5 py-0.5 text-sm text-green-700">
+                              Fed
+                            </span>
+                          </>
+                        ) : selectedKennels.includes(kennel) ? (
+                          <FaCheck className="text-2xl mb-2" />
+                        ) : (
+                          <FaTimes className="text-2xl mb-2" />
+                        )}
+                        <span>Kennel {kennel.kennel_number}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="mt-8 flex justify-end">
+        <button
+          onClick={handleSubmit}
+          disabled={selectedKennels.length === 0}
+          className={`px-6 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            selectedKennels.length === 0
+              ? "bg-gray-400 text-white cursor-not-allowed"
+              : "bg-blue-500 text-white hover:bg-blue-600"
+          }`}
+        >
+          Submit
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default FeedingSchedule;
+,
 
 SUPABASE TABLES :
 create table
@@ -913,40 +1152,23 @@ create table
     drop boolean null default false,
     created_at timestamp without time zone null default current_timestamp,
     customer_id integer not null,
+    
     kennel_numbers jsonb null,
     constraint reservations_pkey primary key (id),
     constraint reservations_customer_id_fkey foreign key (customer_id) references customers (id)
   ) tablespace pg_default;
-  ,
-### Instruction
-Enhance the functionality for moving customers between kennels and updating kennel statuses accordingly. Also, display React Toastify messages at the bottom.
+  
+, In this Feeding Information tab of the CustomerDetailDialog, the table doesn't show data when other people made reservations to the same kennel or I assigned to another kennel. For example, if I feed the dog in Kennel 1 and move the dog to Kennel 2 or a kennel that has multiple reservations, the table doesn't show data.the the feeding information is added through the FeedingSchedule.jsx component and can be viewed using CustomerDetailDialog
+,
+SOLUTIONS :
 
-### Context
-- Kennels have statuses: 'available', 'reserved', 'occupied'.
-- The status hierarchy is: occupied > reserved > available.
+The root cause of this problem is likely that the feeding information is being fetched based on the current kennel ID only, without considering past kennel assignments or multiple reservations. We need to modify the logic to fetch feeding information for all kennels associated with the current reservation.
 
-### Requirement
-1. **Update Original Kennel Status**:
-   - If a kennel has only one customer and that customer is moved to another kennel, update the original kennel's status to 'available'.
-
-2. **Move Button Functionality**:
-   - When the move button is clicked, update the status of the selected kennel based on the status of the kennel being moved:
-     - If the selected kennel is 'available' or 'reserved', and the kennel being moved has a status of 'reserved', update the selected kennel's status to 'reserved'.
-     - If the selected kennel is 'occupied', and the kennel being moved has a status of 'reserved', maintain the selected kennel's status as 'occupied'.
-
-3. **Status Hierarchy**:
-   - The status hierarchy should be followed: occupied > reserved > available.
-
-4. **React Toastify Messages**:
-   - Display React Toastify messages at the bottom of the screen.
-   - Ensure messages indicate the success or failure of the move operation.
-, 
-SOLUTION :
-To enhance the functionality for moving customers between kennels and updating kennel statuses accordingly, while also displaying React Toastify messages at the bottom, we'll need to make several changes to the existing code. Here's how we can implement these requirements:
+Here's how we can update the CustomerDetailDialog component to fix this issue:
 
 
 
-```jsx
+```javascript
 import React, { useEffect, useState } from "react";
 import { supabase } from "../supabase";
 import { FaTimes, FaCheck, FaDownload, FaSpinner, FaChevronLeft, FaChevronRight } from "react-icons/fa";
@@ -960,7 +1182,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-// ... (keep existing code for styles and other components)
+// ... (keep all the existing imports and styles)
 
 const CustomerDetailDialog = ({
   customer,
@@ -970,106 +1192,248 @@ const CustomerDetailDialog = ({
   setCurrentPage,
   totalPages,
 }) => {
-  // ... (keep existing state variables and useEffects)
+  // ... (keep all the existing state variables)
 
-  const handleMoveReservation = async (reservationId, newKennelId) => {
-    try {
-      // Get the current status of the new kennel
-      const { data: newKennel, error: newKennelError } = await supabase
-        .from("kennels")
-        .select("status")
-        .eq("id", newKennelId)
-        .single();
+  useEffect(() => {
+    const fetchCustomerDetail = async () => {
+      if (customer) {
+        const { data: reservations, error: reservationError } = await supabase
+          .from("reservations")
+          .select(
+            `
+            *,
+            pet_information (
+              id,
+              dietary_requirements,
+              special_care_instructions,
+              medical_notes
+            ),
+            customers:customer_id (
+              customer_name,
+              customer_phone,
+              customer_address
+            )
+          `
+          )
+          .eq("id", customer.reservation_id)
+          .single();
 
-      if (newKennelError) throw newKennelError;
+        if (reservationError) {
+          console.error(
+            "Error fetching reservation details:",
+            reservationError.message
+          );
+        } else {
+          setCustomerDetail({
+            customer_name: reservations.customers.customer_name,
+            customer_phone: reservations.customers.customer_phone,
+            customer_address: reservations.customers.customer_address,
+            pets: [{
+              pet_name: reservations.pet_name,
+              pet_breed: reservations.pet_breed,
+              start_date: reservations.start_date,
+              end_date: reservations.end_date,
+              pickup: reservations.pickup,
+              groom: reservations.groom,
+              drop: reservations.drop,
+              ...reservations.pet_information[0],
+            }],
+            kennel_numbers: reservations.kennel_numbers,
+          });
 
-      // Get the current status of the original kennel
-      const { data: originalKennel, error: originalKennelError } = await supabase
-        .from("kennels")
-        .select("status")
-        .eq("id", customer.id)
-        .single();
-
-      if (originalKennelError) throw originalKennelError;
-
-      // Determine the new status for the selected kennel
-      let newStatus = newKennel.status;
-      if (newKennel.status === 'available' || (newKennel.status === 'reserved' && originalKennel.status === 'occupied')) {
-        newStatus = originalKennel.status;
+          fetchFeedingSchedule(reservations.id);
+        }
       }
+    };
 
-      // Update the reservation with the new kennel ID
-      const { error: updateReservationError } = await supabase
-        .from("reservations")
-        .update({ kennel_ids: [newKennelId] })
-        .eq("id", reservationId);
+    fetchCustomerDetail();
+  }, [customer]);
 
-      if (updateReservationError) throw updateReservationError;
+  const fetchFeedingSchedule = async (reservationId) => {
+    const { data: feedingData, error } = await supabase
+      .from("feeding_schedule")
+      .select("*")
+      .eq("reservation_id", reservationId)
+      .order("feeding_date", { ascending: true });
 
-      // Update the status of the new kennel
-      const { error: updateNewKennelError } = await supabase
-        .from("kennels")
-        .update({ status: newStatus })
-        .eq("id", newKennelId);
+    if (error) {
+      console.error("Error fetching feeding schedule:", error.message);
+    } else {
+      const groupedData = feedingData.reduce((acc, entry) => {
+        const key = `${entry.kennel_id}-${entry.feeding_date}`;
+        if (!acc[key]) {
+          acc[key] = {
+            kennel_id: entry.kennel_id,
+            feeding_date: entry.feeding_date,
+            morning_fed: false,
+            noon_fed: false,
+          };
+        }
+        if (entry.feeding_time === "morning") {
+          acc[key].morning_fed = entry.fed;
+        } else if (entry.feeding_time === "noon") {
+          acc[key].noon_fed = entry.fed;
+        }
+        return acc;
+      }, {});
 
-      if (updateNewKennelError) throw updateNewKennelError;
-
-      // Check if the original kennel is now empty
-      const { data: remainingReservations, error: remainingReservationsError } = await supabase
-        .from("reservations")
-        .select("id")
-        .contains("kennel_ids", [customer.id]);
-
-      if (remainingReservationsError) throw remainingReservationsError;
-
-      if (remainingReservations.length === 0) {
-        // Update the status of the original kennel to 'available'
-        const { error: updateOriginalKennelError } = await supabase
-          .from("kennels")
-          .update({ status: 'available' })
-          .eq("id", customer.id);
-
-        if (updateOriginalKennelError) throw updateOriginalKennelError;
-      }
-
-      fetchOverlappingReservations();
-      toast.success("Reservation moved successfully!", { position: "bottom-center" });
-      setIsMoveDialogOpen(false);
-      setSelectedReservation(null);
-    } catch (error) {
-      console.error("Error moving reservation:", error.message);
-      toast.error("Failed to move reservation. Please try again.", { position: "bottom-center" });
+      setFilteredFeedings(Object.values(groupedData));
     }
   };
 
-  // ... (keep other existing functions)
+  // ... (keep all the existing functions)
 
   return (
-    <>
-      <Modal
-        isOpen={isOpen}
-        onRequestClose={onClose}
-        style={customStyles}
-        contentLabel="Customer Details"
-        ariaHideApp={false}
-      >
-        {/* ... (keep existing modal content) */}
-      </Modal>
+    <Modal
+      isOpen={isOpen}
+      onRequestClose={onClose}
+      style={customStyles}
+      contentLabel="Customer Details"
+      ariaHideApp={false}
+    >
+      {/* ... (keep the existing modal content) */}
+      
+      <TabPanel className="mt-6">
+        <div className="mt-4">
+          <div className="flex items-center mb-4">
+            <label className="mr-4 font-semibold text-gray-700">
+              Filter by Date:
+            </label>
+            <ReactDatePicker
+              selected={filterDate}
+              onChange={(date) => setFilterDate(date)}
+              className="border rounded-md p-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-300"
+            />
+            <button
+              className="ml-4 bg-emerald-500 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition-colors duration-300 flex items-center"
+              onClick={downloadPDF}
+              disabled={isDownloadingPDF}
+            >
+              {isDownloadingPDF ? (
+                <FaSpinner className="animate-spin mr-2" />
+              ) : (
+                <FaDownload className="mr-2" />
+              )}
+              Download PDF
+            </button>
+          </div>
+          <div className="rounded-lg border border-gray-200 shadow-md">
+            <div className="max-h-72 overflow-y-auto">
+              <table className="min-w-full divide-y divide-gray-200 bg-white text-sm">
+                <thead className="bg-gray-100 top-0 sticky text-gray-700">
+                  <tr>
+                    <th className="whitespace-nowrap px-3 py-2 font-semibold">
+                      Feeding Date
+                    </th>
+                    <th className="whitespace-nowrap px-3 py-2 font-semibold">
+                      Kennel Number
+                    </th>
+                    <th className="whitespace-nowrap px-3 py-2 font-semibold">
+                      Fed (Morning)
+                    </th>
+                    <th className="whitespace-nowrap px-3 py-2 font-semibold">
+                      Fed (Noon)
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filterDate
+                    ? filteredFeedings
+                        .filter(
+                          (feeding) =>
+                            new Date(feeding.feeding_date)
+                              .toISOString()
+                              .slice(0, 10) === filterDate.toISOString().slice(0, 10)
+                        )
+                        .map((feeding, index) => (
+                          <tr
+                            key={index}
+                            className={`hover:bg-gray-100 transition-colors duration-300 ${
+                              index % 2 === 0
+                                ? "bg-gray-100"
+                                : "bg-white"
+                            }`}
+                          >
+                            <td className="whitespace-nowrap px-3 py-2">
+                              {new Date(
+                                feeding.feeding_date
+                              ).toLocaleDateString()}
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-2">
+                              {customerDetail.kennel_numbers[feeding.kennel_id] || "N/A"}
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-2">
+                              {feeding.morning_fed ? (
+                                <span className="bg-green-500 text-white p-1 rounded">
+                                  Yes
+                                </span>
+                              ) : (
+                                <span className="bg-red-500 text-white p-1 rounded">
+                                  No
+                                </span>
+                              )}
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-2">
+                              {feeding.noon_fed ? (
+                                <span className="bg-green-500 text-white p-1 rounded">
+                                  Yes
+                                </span>
+                              ) : (
+                                <span className="bg-red-500 text-white p-1 rounded">
+                                  No
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                    : filteredFeedings.map((feeding, index) => (
+                        <tr
+                          key={index}
+                          className={`hover:bg-gray-100 transition-colors duration-300 ${
+                            index % 2 === 0 ? "bg-gray-100" : "bg-white"
+                          }`}
+                        >
+                          <td className="whitespace-nowrap px-3 py-2">
+                            {new Date(
+                              feeding.feeding_date
+                            ).toLocaleDateString()}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-2">
+                            {customerDetail.kennel_numbers[feeding.kennel_id] || "N/A"}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-2">
+                            {feeding.morning_fed ? (
+                              <span className="bg-green-500 text-white p-1 rounded">
+                                Yes
+                              </span>
+                            ) : (
+                              <span className="bg-red-500 text-white p-1 rounded">
+                                No
+                              </span>
+                            )}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-2">
+                            {feeding.noon_fed ? (
+                              <span className="bg-green-500 text-white p-1 rounded">
+                                Yes
+                              </span>
+                            ) : (
+                              <span className="bg-red-500 text-white p-1 rounded">
+                                No
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </TabPanel>
 
-      {isMoveDialogOpen && (
-        <Modal
-          isOpen={isMoveDialogOpen}
-          onRequestClose={() => setIsMoveDialogOpen(false)}
-          style={moveDialogStyles}
-          contentLabel="Move Reservation"
-          ariaHideApp={false}
-        >
-          {/* ... (keep existing move dialog content) */}
-        </Modal>
-      )}
-
-      <ToastContainer position="bottom-center" autoClose={5000} hideProgressBar={false} newestOnTop={false} closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover />
-    </>
+      {/* ... (keep the rest of the component) */}
+    </Modal>
   );
 };
 
@@ -1077,33 +1441,27 @@ export default CustomerDetailDialog;
 
 ```
 
-Here's a breakdown of the changes made to enhance the functionality:
+Now, let's go through the main changes and explain why they fix the issue:
 
-1. **Update Original Kennel Status**:
-   - After moving a reservation, we check if there are any remaining reservations for the original kennel.
-   - If there are no remaining reservations, we update the original kennel's status to 'available'.
+1. We've modified the `fetchCustomerDetail` function to fetch the reservation data based on the `reservation_id` instead of the `kennel_id`. This ensures we get all the information related to the specific reservation, including all kennel assignments.
 
-2. **Move Button Functionality**:
-   - We fetch the current status of both the new kennel and the original kennel.
-   - We determine the new status for the selected kennel based on the status hierarchy:
-     - If the new kennel is 'available' or 'reserved', and the original kennel is 'occupied', we set the new kennel to 'occupied'.
-     - Otherwise, we maintain the current status of the new kennel.
+2. We've added a new `fetchFeedingSchedule` function that fetches feeding data based on the `reservation_id`. This allows us to get all feeding records associated with the reservation, regardless of which kennel the pet was in at the time.
 
-3. **Status Hierarchy**:
-   - The status hierarchy (occupied > reserved > available) is implemented in the logic for determining the new kennel's status.
+3. In the table rendering, we've added a new column to display the kennel number. This helps identify which kennel the pet was in for each feeding record.
 
-4. **React Toastify Messages**:
-   - We've added toast notifications for success and error cases when moving a reservation.
-   - The ToastContainer is added at the bottom of the component to display these messages.
+4. We're now using the `kennel_numbers` data from the reservation to display the correct kennel number for each feeding record.
 
-To implement these changes:
+These changes ensure that the Feeding Information tab shows all feeding records associated with the reservation, even if the pet has been moved between kennels or if there are multiple reservations for the same kennel.
 
-1. Update the `handleMoveReservation` function in the CustomerDetailDialog component with the new logic.
-2. Add the ToastContainer at the bottom of the component's return statement.
-3. Make sure to import the necessary components from react-toastify:
-   ```javascript
-   import { toast, ToastContainer } from "react-toastify";
-   import "react-toastify/dist/ReactToastify.css";
-   ```
+To make this work, you'll need to ensure that the `feeding_schedule` table in your Supabase database has a `reservation_id` column to link feeding records to specific reservations. If it doesn't, you'll need to add this column and update your FeedingSchedule component to include the `reservation_id` when creating new feeding records.
 
-These changes will enhance the functionality for moving customers between kennels, ensure proper updating of kennel statuses, and provide user feedback through toast notifications.
+Here's a quick SQL command to add the `reservation_id` column to your `feeding_schedule` table if it doesn't exist:
+
+```sql
+ALTER TABLE feeding_schedule
+ADD COLUMN reservation_id INTEGER,
+ADD CONSTRAINT feeding_schedule_reservation_id_fkey
+FOREIGN KEY (reservation_id) REFERENCES reservations(id);
+```
+
+After making these changes, the Feeding Information tab should correctly display all feeding records for a reservation, regardless of kennel changes or multiple reservations.

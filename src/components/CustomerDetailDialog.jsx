@@ -183,7 +183,7 @@ const CustomerDetailDialog = ({
           `
           )
           .contains("kennel_ids", [customer.id])
-          .order("start_date", { ascending: true }); // Order by start date
+          .order("start_date", { ascending: true });
 
         if (reservationError) {
           console.error(
@@ -191,7 +191,14 @@ const CustomerDetailDialog = ({
             reservationError.message
           );
         } else {
-          const pets = reservations.map((reservation) => {
+          // Sort the reservations by status: 'checkin' first, then 'reserved'
+          const sortedReservations = reservations.sort((a, b) => {
+            if (a.status === 'checkin' && b.status === 'reserved') return -1;
+            if (a.status === 'reserved' && b.status === 'checkin') return 1;
+            return 0;
+          });
+
+          const pets = sortedReservations.map((reservation) => {
             const {
               pet_name,
               pet_breed,
@@ -227,7 +234,7 @@ const CustomerDetailDialog = ({
             kennel_numbers: [customer.kennel_number],
           });
 
-          setOverlappingReservations(reservations);
+          setOverlappingReservations(sortedReservations);
         }
       }
     };
@@ -320,60 +327,94 @@ const CustomerDetailDialog = ({
 
   const handleMoveReservation = async (reservationId, newKennelId) => {
     try {
-      await supabase
-        .from("reservations")
-        .update({ kennel_ids: [newKennelId] })
-        .eq("id", reservationId);
-
-      // Update status of the new kennel based on the status of the original kennel
-      const { data: newKennel, error: kennelError } = await supabase
+      // Get the current status of the new kennel
+      const { data: newKennel, error: newKennelError } = await supabase
         .from("kennels")
-        .select("*")
+        .select("status")
         .eq("id", newKennelId)
         .single();
 
+      if (newKennelError) throw newKennelError;
+
+      // Get the current status of the original kennel
       const { data: originalKennel, error: originalKennelError } = await supabase
         .from("kennels")
         .select("status")
         .eq("id", customer.id)
         .single();
 
-      if (kennelError || originalKennelError) {
-        console.error("Error fetching kennel details:", kennelError?.message || originalKennelError?.message);
-      } else {
-        const newStatus = originalKennel.status === "occupied" ? "occupied" : "reserved";
-        await supabase
-          .from("kennels")
-          .update({ status: newStatus })
-          .eq("id", newKennelId);
+      if (originalKennelError) throw originalKennelError;
+
+      // Determine the new status for the selected kennel
+      let newStatus = newKennel.status;
+      if (newKennel.status === 'available' || (newKennel.status === 'reserved' && originalKennel.status === 'occupied')) {
+        newStatus = originalKennel.status;
       }
 
-      // Update status of the original kennel to "available" if it's empty
-      const { data: originalKennelReservations, error: originalKennelReservationError } =
-        await supabase
+      // Update the reservation with the new kennel ID
+      const { error: updateReservationError } = await supabase
+        .from("reservations")
+        .update({ kennel_ids: [newKennelId] })
+        .eq("id", reservationId);
+
+      if (updateReservationError) throw updateReservationError;
+
+      // Update the status of the new kennel
+      const { error: updateNewKennelError } = await supabase
+        .from("kennels")
+        .update({ status: newStatus })
+        .eq("id", newKennelId);
+
+      if (updateNewKennelError) throw updateNewKennelError;
+
+      // Check if the original kennel is now empty
+      const { data: remainingReservations, error: remainingReservationsError } = await supabase
+        .from("reservations")
+        .select("id")
+        .contains("kennel_ids", [customer.id]);
+
+      if (remainingReservationsError) throw remainingReservationsError;
+
+      if (remainingReservations.length === 0) {
+        // Update the status of the original kennel to 'available'
+        const { error: updateOriginalKennelError } = await supabase
+          .from("kennels")
+          .update({ status: 'available' })
+          .eq("id", customer.id);
+
+        if (updateOriginalKennelError) throw updateOriginalKennelError;
+      } else {
+        // Check the status of remaining reservations and update the kennel status accordingly
+        const remainingStatuses = await supabase
           .from("reservations")
-          .select("*")
+          .select("status")
           .contains("kennel_ids", [customer.id]);
 
-      if (originalKennelReservationError) {
-        console.error(
-          "Error fetching original kennel reservations:",
-          originalKennelReservationError.message
-        );
-      } else if (originalKennelReservations.length === 1) {
-        await supabase
+        const hasCheckin = remainingStatuses.data.some((res) => res.status === "checkin");
+        const hasReserved = remainingStatuses.data.some((res) => res.status === "reserved");
+
+        let originalKennelStatus = "available";
+        if (hasCheckin) {
+          originalKennelStatus = "occupied";
+        } else if (hasReserved) {
+          originalKennelStatus = "reserved";
+        }
+
+        const { error: updateOriginalKennelStatusError } = await supabase
           .from("kennels")
-          .update({ status: "available" })
+          .update({ status: originalKennelStatus })
           .eq("id", customer.id);
+
+        if (updateOriginalKennelStatusError) throw updateOriginalKennelStatusError;
       }
 
       fetchOverlappingReservations();
-      toast.success("Reservation moved successfully!");
+      toast.success("Reservation moved successfully!", { position: "bottom-center" });
       setIsMoveDialogOpen(false);
       setSelectedReservation(null);
     } catch (error) {
       console.error("Error moving reservation:", error.message);
-      toast.error("Failed to move reservation. Please try again.");
+      toast.error("Failed to move reservation. Please try again.", { position: "bottom-center" });
     }
   };
 
@@ -381,7 +422,7 @@ const CustomerDetailDialog = ({
     const { data: kennels, error } = await supabase
       .from("kennels")
       .select("*")
-      .in("status", ["available", "reserved", "occupied"])
+      .in("status", ["available", "reserved"])
       .neq("id", customer.id) // Exclude the current kennel
       .order("kennel_number", { ascending: true });
 
@@ -440,7 +481,6 @@ const CustomerDetailDialog = ({
       contentLabel="Customer Details"
       ariaHideApp={false}
     >
-      <ToastContainer position="bottom-right" autoClose={3000} hideProgressBar={false} />
       <div className="bg-white p-8">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-bold text-gray-800 text-center -mt-5 mb-4 w-full">
@@ -607,10 +647,9 @@ const CustomerDetailDialog = ({
                   Download PDF
                 </button>
               </div>
-              <div className="rounded-lg border border-gray-200 shadow-md">
-                <div className="max-h-72 overflow-y-auto">
-                  <table className="min-w-full divide-y divide-gray-200 bg-white text-sm">
-                    <thead className="bg-gray-100 top-0 sticky text-gray-700">
+              <div className="overflow-x-auto rounded-lg border border-gray-200">
+                <table className="min-w-full divide-y-2 divide-gray-200 bg-white text-sm">
+                  <thead className="ltr:text-left rtl:text-right">
                       <tr>
                         <th className="whitespace-nowrap px-3 py-2 font-semibold">
                           Feeding Date
@@ -641,7 +680,7 @@ const CustomerDetailDialog = ({
                                     : "bg-white"
                                 }`}
                               >
-                                <td className="whitespace-nowrap px-3 py-2">
+                                <td className="whitespace-nowrap  px-3 py-2">
                                   {new Date(
                                     feeding.feeding_date
                                   ).toLocaleDateString()}
@@ -677,12 +716,12 @@ const CustomerDetailDialog = ({
                                 index % 2 === 0 ? "bg-gray-100" : "bg-white"
                               }`}
                             >
-                              <td className="whitespace-nowrap px-3 py-2">
+                              <td className="whitespace-nowrap text-center px-3 py-2">
                                 {new Date(
                                   feeding.feeding_date
                                 ).toLocaleDateString()}
                               </td>
-                              <td className="whitespace-nowrap px-3 py-2">
+                              <td className="whitespace-nowrap text-center px-3 py-2">
                                 {feeding.morning_fed ? (
                                   <span className="bg-green-500 text-white p-1 rounded">
                                     Yes
@@ -693,7 +732,7 @@ const CustomerDetailDialog = ({
                                   </span>
                                 )}
                               </td>
-                              <td className="whitespace-nowrap px-3 py-2">
+                              <td className="whitespace-nowrap text-center px-3 py-2">
                                 {feeding.noon_fed ? (
                                   <span className="bg-green-500 text-white p-1 rounded">
                                     Yes
@@ -710,7 +749,7 @@ const CustomerDetailDialog = ({
                   </table>
                 </div>
               </div>
-            </div>
+        
           </TabPanel>
 
           <TabPanel className="mt-6">
@@ -724,6 +763,12 @@ const CustomerDetailDialog = ({
                       </th>
                       <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
                         Phone Number
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
+                        Pet Name
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
+                        Pet Breed
                       </th>
                       <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
                         Check-in Date
@@ -747,8 +792,14 @@ const CustomerDetailDialog = ({
                         <td className="whitespace-nowrap px-4 text-center py-2 font-medium text-gray-900">
                           {reservation.customers.customer_name}
                         </td>
-                        <td className="whitespace-nowrap px-4  text-center py-2 text-gray-700">
+                        <td className="whitespace-nowrap px-4 text-center py-2 text-gray-700">
                           {reservation.customers.customer_phone}
+                        </td>
+                        <td className="whitespace-nowrap px-4 text-center py-2 text-gray-700">
+                          {reservation.pet_name}
+                        </td>
+                        <td className="whitespace-nowrap px-4 text-center py-2 text-gray-700">
+                          {reservation.pet_breed}
                         </td>
                         <td className="whitespace-nowrap px-4 text-center py-2 text-gray-700">
                           {new Date(reservation.start_date).toLocaleDateString()}
@@ -850,5 +901,4 @@ const CustomerDetailDialog = ({
     </Modal>
   );
 };
-
 export default CustomerDetailDialog;
