@@ -60,12 +60,12 @@ const Sidebar = () => {
       icon: <FaTachometerAlt />,
       tooltip: "View dashboard statistics",
     },
-    {
-      title: "Calendar",
-      path: "/calendar",
-      icon: <FaRegCalendarAlt />,
-      tooltip: "View reservation calendar",
-    },
+    // {
+    //   title: "Calendar",
+    //   path: "/calendar",
+    //   icon: <FaRegCalendarAlt />,
+    //   tooltip: "View reservation calendar",
+    // },
   ];
 
   return (

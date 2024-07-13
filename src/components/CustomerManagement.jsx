@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import CustomerTable from "./CustomerTable"; // Customer table component
-import CustomerDetailDialog from "./CustomerDetailDialog"; // Customer detail dialog
 
 const CustomerManagement = () => {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -13,14 +12,9 @@ const CustomerManagement = () => {
 
   return (
     <div className="flex flex-col">
-      <div className="flex-1 p-4 overflow-auto">
+      <div className="flex-1 p-4 ">
         <CustomerTable onViewCustomer={handleViewCustomer} />
-        {/* Customer detail modal */}
-        <CustomerDetailDialog
-          customer={selectedCustomer}
-          isOpen={isCustomerDetailOpen}
-          onClose={() => setIsCustomerDetailOpen(false)}
-        />
+      
       </div>
     </div>
   );

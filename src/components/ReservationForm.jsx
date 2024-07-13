@@ -576,19 +576,19 @@ const ReservationForm = () => {
   const createReservation = async (data) => {
     if (validateForm(data)) {
       let customerData;
-
+  
       const { data: existingCustomers, error: fetchCustomerError } =
         await supabase
           .from("customers")
           .select("*")
           .eq("customer_phone", data.customerPhone);
-
+  
       if (fetchCustomerError) {
         console.error("Error fetching customer:", fetchCustomerError.message);
         toast.error("Failed to fetch customer details.", { position: "bottom-center" });
         return;
       }
-
+  
       if (existingCustomers.length > 0) {
         customerData = existingCustomers[0];
       } else {
@@ -602,19 +602,19 @@ const ReservationForm = () => {
             },
           ])
           .select();
-
+  
         if (newCustomerError) {
           console.error("Error creating customer:", newCustomerError.message);
           toast.error("Failed to create customer.", { position: "bottom-center" });
           return;
         }
-
+  
         customerData = newCustomer[0];
       }
-
+  
       const reservationStatus =
         data.endDate < new Date() ? "checked_out" : "reserved";
-
+  
       for (const pet of pets) {
         const { error: reservationError } = await supabase
           .from("reservations")
@@ -630,7 +630,7 @@ const ReservationForm = () => {
             groom: pet.groom,
             drop: pet.drop,
           });
-
+  
         if (reservationError) {
           console.error(
             "Error creating reservation:",
@@ -638,19 +638,42 @@ const ReservationForm = () => {
           );
           toast.error("Failed to create reservation.", { position: "bottom-center" });
         } else {
-          const kennelStatus =
-            reservationStatus === "checked_out" ? "available" : "reserved";
-          await supabase
+          const { data: kennelData, error: fetchKennelError } = await supabase
             .from("kennels")
-            .update({ status: kennelStatus })
-            .eq("id", pet.kennel.id);
+            .select("status")
+            .eq("id", pet.kennel.id)
+            .single();
+  
+          if (fetchKennelError) {
+            console.error("Error fetching kennel status:", fetchKennelError.message);
+            toast.error("Failed to update kennel status.", { position: "bottom-center" });
+            return;
+          }
+  
+          const currentStatus = kennelData.status;
+          const newStatus =
+            reservationStatus === "checked_out"
+              ? "available"
+              : reservationStatus;
+  
+          if (
+            (currentStatus === "available" && newStatus === "reserved") ||
+            (currentStatus === "reserved" && newStatus === "occupied") ||
+            (currentStatus === "available" && newStatus === "occupied")
+          ) {
+            await supabase
+              .from("kennels")
+              .update({ status: newStatus })
+              .eq("id", pet.kennel.id);
+          }
         }
       }
-
+  
       toast.success("Reservation created successfully!", { position: "bottom-center" });
       clearForm();
     }
   };
+  
 
   const toUTCDate = (date) => {
     const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));

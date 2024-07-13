@@ -166,10 +166,12 @@ const ReservationList = () => {
 
   const handleFilterStartDateChange = (date) => {
     setFilterStartDate(date);
+    filterReservations(reservations, searchQuery, filterStatus, date, filterEndDate);
   };
 
   const handleFilterEndDateChange = (date) => {
     setFilterEndDate(date);
+    filterReservations(reservations, searchQuery, filterStatus, filterStartDate, date);
   };
 
   const handleDateFilter = (startDate, endDate) => {
@@ -177,6 +179,7 @@ const ReservationList = () => {
   };
 
   const handleStatusFilterChange = (status) => {
+    setFilterStatus(status);
     filterReservations(reservations, searchQuery, status, filterStartDate, filterEndDate);
   };
 
@@ -200,12 +203,11 @@ const ReservationList = () => {
         reservation.pet_breed.toLowerCase().includes(lowerQuery) ||
         reservation.customers.customer_phone.toLowerCase().includes(lowerQuery);
       const matchesStatus = status ? reservation.status === status : true;
-      const matchesDate =
-        startDate && endDate
-          ? new Date(reservation.start_date) >= startDate &&
-            new Date(reservation.end_date) <= endDate.setHours(23, 59, 59, 999)
-          : true;
-      return matchesQuery && matchesStatus && matchesDate && reservation.status !== "canceled";
+      const matchesCheckInDate =
+        startDate ? new Date(reservation.start_date).toDateString() === startDate.toDateString() : true;
+      const matchesCheckOutDate =
+        endDate ? new Date(reservation.end_date).toDateString() === endDate.toDateString() : true;
+      return matchesQuery && matchesStatus && matchesCheckInDate && matchesCheckOutDate && reservation.status !== "canceled";
     });
     setFilteredReservations(filtered);
   };
@@ -233,8 +235,8 @@ const ReservationList = () => {
         onSearchChange={handleSearchChange}
         onDateFilter={handleDateFilter}
         onStatusFilterChange={handleStatusFilterChange}
-        setFilterStartDate={setFilterStartDate}
-        setFilterEndDate={setFilterEndDate}
+        setFilterStartDate={handleFilterStartDateChange}
+        setFilterEndDate={handleFilterEndDateChange}
         setFilterStatus={setFilterStatus}
       />
       <ReservationTable

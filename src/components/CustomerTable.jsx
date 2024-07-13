@@ -60,6 +60,9 @@ const CustomerTable = ({
         };
       });
 
+      // Sort reservations by created_at date
+      enhancedReservations.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
       setCustomers(enhancedReservations);
       setFilteredCustomers(enhancedReservations);
     }
@@ -117,7 +120,7 @@ const CustomerTable = ({
         onStatusFilter={handleStatusFilter}
       />
 
-      <div className="overflow-x-auto rounded-lg border border-gray-200 ">
+      <div className="overflow-x-auto rounded-lg border border-gray-200">
         <div className="max-h-[530px] overflow-y-auto">
           <table className="min-w-full divide-y-2 divide-gray-200 bg-white text-sm">
             <thead className="bg-gray-50 sticky top-0 z-0">

@@ -58,6 +58,15 @@ const ReservationTable = ({
     // This function should update the state of reservations
   };
 
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  };
+
   return (
     <div className="overflow-auto max-h-screen-60 rounded-lg border border-gray-200">
       <table className="min-w-full divide-y-2 divide-gray-200 bg-white text-sm">
@@ -126,16 +135,16 @@ const ReservationTable = ({
                 {reservation.pet_breed}
               </td>
               <td className="whitespace-nowrap px-4 text-center py-2 text-gray-700">
-                {new Date(reservation.created_at).toDateString()}
+                {formatDate(reservation.created_at)}
               </td>
               <td className="whitespace-nowrap text-center px-4 py-2 text-gray-700">
                 {reservation.kennel_numbers}
               </td>
               <td className="whitespace-nowrap px-4 text-center py-2 text-gray-700">
-                {new Date(reservation.start_date).toDateString()}
+                {formatDate(reservation.start_date)}
               </td>
               <td className="whitespace-nowrap px-4 text-center py-2 text-gray-700">
-                {new Date(reservation.end_date).toDateString()}
+                {formatDate(reservation.end_date)}
               </td>
               <td className="whitespace-nowrap pl-7  py-2 text-center">
                 {reservation.pickup ? (
@@ -170,7 +179,9 @@ const ReservationTable = ({
                       : "bg-yellow-400"
                   }`}
                 >
-                  {reservation.status === "checkin" ? "check in" : reservation.status} 
+                  {reservation.status === "checkin"
+                    ? "check in"
+                    : reservation.status}
                 </span>
               </td>
               <td className="whitespace-nowrap px-4 py-2 text-gray-800">
