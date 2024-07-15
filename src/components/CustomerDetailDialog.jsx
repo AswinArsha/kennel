@@ -367,6 +367,14 @@ const CustomerDetailDialog = ({
 
       if (updateNewKennelError) throw updateNewKennelError;
 
+      // Update the feeding_schedule to reflect the new kennel ID
+      const { error: updateFeedingScheduleError } = await supabase
+        .from("feeding_schedule")
+        .update({ kennel_id: newKennelId })
+        .eq("kennel_id", customer.id);
+
+      if (updateFeedingScheduleError) throw updateFeedingScheduleError;
+
       // Check if the original kennel is now empty
       const { data: remainingReservations, error: remainingReservationsError } = await supabase
         .from("reservations")
@@ -469,36 +477,6 @@ const CustomerDetailDialog = ({
         );
       } else {
         setOverlappingReservations(reservations);
-
-        // Fetch feeding information for the new kennel
-        const { data: feedingData, error: feedingError } = await supabase
-          .from("feeding_schedule")
-          .select("*")
-          .eq("kennel_id", customer.id);
-
-        if (feedingError) {
-          console.error("Error fetching feeding schedule:", feedingError.message);
-        } else {
-          const groupedData = feedingData.reduce((acc, entry) => {
-            const key = `${entry.kennel_id}-${entry.feeding_date}`;
-            if (!acc[key]) {
-              acc[key] = {
-                kennel_id: entry.kennel_id,
-                feeding_date: entry.feeding_date,
-                morning_fed: false,
-                noon_fed: false,
-              };
-            }
-            if (entry.feeding_time === "morning") {
-              acc[key].morning_fed = entry.fed;
-            } else if (entry.feeding_time === "noon") {
-              acc[key].noon_fed = entry.fed;
-            }
-            return acc;
-          }, {});
-
-          setFilteredFeedings(Object.values(groupedData));
-        }
       }
     }
   };
@@ -932,3 +910,4 @@ const CustomerDetailDialog = ({
   );
 };
 export default CustomerDetailDialog;
+

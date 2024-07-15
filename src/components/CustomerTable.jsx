@@ -146,9 +146,9 @@ const CustomerTable = ({
                 <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
                   Breed
                 </th>
-                <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
+                {/* <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
                   Reservation Date
-                </th>
+                </th> */}
                 <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
                   Status
                 </th>
@@ -178,9 +178,9 @@ const CustomerTable = ({
                   <td className="whitespace-nowrap text-center px-4 py-2 text-gray-700">
                     {customer.pet_breed}
                   </td>
-                  <td className="whitespace-nowrap text-center px-4 py-2 text-gray-700">
+                  {/* <td className="whitespace-nowrap text-center px-4 py-2 text-gray-700">
                     {new Date(customer.created_at).toLocaleDateString()}
-                  </td>
+                  </td> */}
                   <td className="whitespace-nowrap text-center px-4 py-2 text-gray-800">
                     <span
                       className={`rounded py-1 px-3 text-xs font-bold ${
