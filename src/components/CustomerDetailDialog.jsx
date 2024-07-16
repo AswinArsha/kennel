@@ -634,16 +634,9 @@ const CustomerDetailDialog = ({
           <TabPanel className="mt-6">
             <div className="mt-4">
               <div className="flex items-center mb-4">
-                <label className="mr-4 font-semibold text-gray-700">
-                  Filter by Date:
-                </label>
-                <ReactDatePicker
-                  selected={filterDate}
-                  onChange={(date) => setFilterDate(date)}
-                  className="border rounded-md p-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-300"
-                />
+               
                 <button
-                  className="ml-4 bg-emerald-500 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition-colors duration-300 flex items-center"
+                  className="ml-4  bg-emerald-500 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition-colors duration-300 flex items-center"
                   onClick={downloadPDF}
                   disabled={isDownloadingPDF}
                 >

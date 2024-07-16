@@ -49,7 +49,7 @@ const ReservationFilter = ({
             selected={filterStartDate}
             onChange={handleStartDateChange}
             className="p-3 pl-10 pr-4 border rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-            dateFormat="yyyy/MM/dd"
+            dateFormat="dd/MM/yyyy"
             placeholderText="Check In"
           />
           <FaCalendarAlt className="absolute top-1/2 left-3 transform -translate-y-1/2 text-gray-400" />
@@ -60,7 +60,7 @@ const ReservationFilter = ({
             selected={filterEndDate}
             onChange={handleEndDateChange}
             className="p-3 pl-10 pr-4 border rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-            dateFormat="yyyy/MM/dd"
+            dateFormat="dd/MM/yyyy"
             placeholderText="Check Out"
             minDate={filterStartDate}
           />

@@ -36,7 +36,7 @@ const CustomerFilter = ({ onSearch, onDateFilter, onStatusFilter }) => {
       <div className="relative w-full sm:w-auto">
         <input
           type="text"
-          className="p-2 pl-8 pr-4 border rounded-md w-full sm:w-64"
+          className="p-2 pl-8 pr-4 border focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md w-full sm:w-64"
           placeholder="Search by customer name"
           value={searchQuery}
           onChange={handleSearch}
@@ -49,8 +49,8 @@ const CustomerFilter = ({ onSearch, onDateFilter, onStatusFilter }) => {
           <DatePicker
             selected={filterStartDate}
             onChange={handleStartDateChange}
-            className="p-2 pl-8 pr-4  border rounded-md w-full"
-            dateFormat="yyyy/MM/dd"
+            className="p-2 pl-8 pr-4  border focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md w-full"
+            dateFormat="dd/MM/yyyy"
             placeholderText="Check In"
           />
           <FaCalendarAlt className="absolute top-3 left-3 text-gray-400" />
@@ -60,8 +60,8 @@ const CustomerFilter = ({ onSearch, onDateFilter, onStatusFilter }) => {
           <DatePicker
             selected={filterEndDate}
             onChange={handleEndDateChange}
-            className="p-2 pl-8 pr-4 border rounded-md w-full"
-            dateFormat="yyyy/MM/dd"
+            className="p-2 pl-8 pr-4 border rounded-md w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+            dateFormat="dd/MM/yyyy"
             placeholderText="Check Out"
             minDate={filterStartDate}
           />
@@ -70,7 +70,7 @@ const CustomerFilter = ({ onSearch, onDateFilter, onStatusFilter }) => {
 
         <div className="relative w-full sm:w-auto">
           <select
-            className="p-2 pl-8 pr-4 border rounded-md w-full sm:w-auto"
+            className="p-2 pl-8 pr-4 border rounded-md w-full focus:outline-none focus:ring-2 focus:ring-blue-500 sm:w-auto"
             value={filterStatus}
             onChange={handleStatusChange}
           >
