@@ -49,9 +49,10 @@ const BillGenerationModal = ({ isOpen, onClose, selectedReservation, onCheckoutS
   };
 
   const handlePerDayBillChange = (event) => {
-    const value = parseInt(event.target.value, 10);
-    if (!isNaN(value)) {
+    const value = event.target.value === "" ? "" : parseInt(event.target.value, 10);
+    if (value === "" || !isNaN(value)) {
       setPerDayBill(value);
+      setTotalBill(daysStayed * value);
     }
   };
 

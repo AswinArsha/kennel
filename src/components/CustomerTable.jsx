@@ -48,15 +48,37 @@ const CustomerTable = ({
         return;
       }
 
+      // Fetch analytics data based on customer_id, pet_name, start_date, and end_date
+      const { data: analyticsData, error: analyticsError } = await supabase
+        .from("analytics")
+        .select("customer_id, pet_name, start_date, end_date, days_stayed, total_bill")
+        .in("customer_id", customerIds);
+
+      if (analyticsError) {
+        console.error("Error fetching analytics data:", analyticsError.message);
+        return;
+      }
+
       const enhancedReservations = historicalReservations.map((reservation) => {
         const customer = customersData.find(
           (c) => c.id === reservation.customer_id
+        );
+        const analytics = analyticsData.find(
+          (a) =>
+            a.customer_id === reservation.customer_id &&
+            a.pet_name === reservation.pet_name &&
+            new Date(a.start_date).toDateString() ===
+              new Date(reservation.start_date).toDateString() &&
+            new Date(a.end_date).toDateString() ===
+              new Date(reservation.end_date).toDateString()
         );
         return {
           ...reservation,
           customer_name: customer.customer_name,
           customer_phone: customer.customer_phone,
           customer_address: customer.customer_address,
+          days_stayed: analytics ? analytics.days_stayed : null,
+          total_bill: analytics ? analytics.total_bill : null,
         };
       });
 
@@ -146,9 +168,12 @@ const CustomerTable = ({
                 <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
                   Breed
                 </th>
-                {/* <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
-                  Reservation Date
-                </th> */}
+                <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
+                  Days Stayed
+                </th>
+                <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
+                  Total Bill 
+                </th>
                 <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
                   Status
                 </th>
@@ -178,9 +203,12 @@ const CustomerTable = ({
                   <td className="whitespace-nowrap text-center px-4 py-2 text-gray-700">
                     {customer.pet_breed}
                   </td>
-                  {/* <td className="whitespace-nowrap text-center px-4 py-2 text-gray-700">
-                    {new Date(customer.created_at).toLocaleDateString()}
-                  </td> */}
+                  <td className="whitespace-nowrap text-center px-4 py-2 text-gray-700">
+                    {customer.days_stayed !== null ? customer.days_stayed : "N/A"}
+                  </td>
+                  <td className="whitespace-nowrap text-center px-4 py-2 text-gray-700">
+                    {customer.total_bill !== null ? customer.total_bill : "N/A"}
+                  </td>
                   <td className="whitespace-nowrap text-center px-4 py-2 text-gray-800">
                     <span
                       className={`rounded py-1 px-3 text-xs font-bold ${
