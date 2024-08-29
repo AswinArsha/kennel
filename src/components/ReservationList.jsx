@@ -228,17 +228,20 @@ const ReservationList = () => {
       <ToastContainer position="bottom-center" autoClose={2000} hideProgressBar={false} />
       <h2 className="text-2xl font-bold mb-4">Reservation List</h2>
       <ReservationFilter
-        searchQuery={searchQuery}
-        filterStartDate={filterStartDate}
-        filterEndDate={filterEndDate}
-        filterStatus={filterStatus}
-        onSearchChange={handleSearchChange}
-        onDateFilter={handleDateFilter}
-        onStatusFilterChange={handleStatusFilterChange}
-        setFilterStartDate={handleFilterStartDateChange}
-        setFilterEndDate={handleFilterEndDateChange}
-        setFilterStatus={setFilterStatus}
-      />
+  searchQuery={searchQuery}
+  filterStartDate={filterStartDate}
+  filterEndDate={filterEndDate}
+  filterStatus={filterStatus}
+  onSearchChange={handleSearchChange}
+  onDateFilter={handleDateFilter}
+  onStatusFilterChange={handleStatusFilterChange}
+  setFilterStartDate={handleFilterStartDateChange}
+  setFilterEndDate={handleFilterEndDateChange}
+  setFilterStatus={setFilterStatus}
+  filterReservations={filterReservations}  // Pass this function as a prop
+  reservations={reservations}  // Also pass down the reservations array
+/>
+
       <ReservationTable
         reservations={filteredReservations}
         onConfirm={confirmReservation}

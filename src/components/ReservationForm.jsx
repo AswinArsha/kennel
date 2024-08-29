@@ -10,7 +10,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { useSearchParams } from 'react-router-dom';
 
 const petBreeds = [
-"Affenpinscher",
+  "Affenpinscher",
   "Afghan Hound",
   "Aidi",
   "Airedale Terrier",
@@ -578,20 +578,20 @@ const ReservationForm = () => {
     if (validateForm(data)) {
       setLoading(true);
       let customerData;
-  
+
       const { data: existingCustomers, error: fetchCustomerError } =
         await supabase
           .from("customers")
           .select("*")
           .eq("customer_phone", data.customerPhone);
-  
+
       if (fetchCustomerError) {
         console.error("Error fetching customer:", fetchCustomerError.message);
         toast.error("Failed to fetch customer details.", { position: "bottom-center" });
         setLoading(false);
         return;
       }
-  
+
       if (existingCustomers.length > 0) {
         customerData = existingCustomers[0];
       } else {
@@ -605,20 +605,20 @@ const ReservationForm = () => {
             },
           ])
           .select();
-  
+
         if (newCustomerError) {
           console.error("Error creating customer:", newCustomerError.message);
           toast.error("Failed to create customer.", { position: "bottom-center" });
           setLoading(false);
           return;
         }
-  
+
         customerData = newCustomer[0];
       }
-  
+
       const reservationStatus =
         data.endDate < new Date() ? "checked_out" : "reserved";
-  
+
       for (const pet of pets) {
         const { error: reservationError } = await supabase
           .from("reservations")
@@ -633,8 +633,9 @@ const ReservationForm = () => {
             pickup: pet.pickup,
             groom: pet.groom,
             drop: pet.drop,
+            advance_amount: data.advanceAmount, // Save the advance amount
           });
-  
+
         if (reservationError) {
           console.error(
             "Error creating reservation:",
@@ -649,20 +650,20 @@ const ReservationForm = () => {
             .select("status")
             .eq("id", pet.kennel.id)
             .single();
-  
+
           if (fetchKennelError) {
             console.error("Error fetching kennel status:", fetchKennelError.message);
             toast.error("Failed to update kennel status.", { position: "bottom-center" });
             setLoading(false);
             return;
           }
-  
+
           const currentStatus = kennelData.status;
           const newStatus =
             reservationStatus === "checked_out"
               ? "available"
               : reservationStatus;
-  
+
           if (
             (currentStatus === "available" && newStatus === "reserved") ||
             (currentStatus === "reserved" && newStatus === "occupied") ||
@@ -675,7 +676,7 @@ const ReservationForm = () => {
           }
         }
       }
-  
+
       toast.success("Reservation created successfully!", { position: "bottom-center" });
       clearForm();
       setLoading(false);
@@ -867,6 +868,8 @@ const ReservationForm = () => {
                 </p>
               )}
             </div>
+
+          
           </div>
 
           <div>
@@ -891,7 +894,6 @@ const ReservationForm = () => {
                       }`}
                       dateFormat="yyyy/MM/dd"
                       placeholderText="Select a start date"
-                      minDate={new Date()}
                     />
                   )}
                 />
@@ -925,7 +927,7 @@ const ReservationForm = () => {
                       }`}
                       dateFormat="yyyy/MM/dd"
                       placeholderText="Select an end date"
-                      minDate={startDate}
+                      minDate={startDate} // Restrict to startDate or later
                     />
                   )}
                 />
@@ -937,7 +939,22 @@ const ReservationForm = () => {
                 </p>
               )}
             </div>
+            <div className="mb-4">
+              <label
+                htmlFor="advanceAmount"
+                className="block text-sm font-medium text-gray-700"
+              >
+                Advance Amount
+              </label>
+              <input
+                type="number"
+                id="advanceAmount"
+                className="w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                {...register("advanceAmount")}
+              />
+            </div>
           </div>
+          
         </div>
 
         {startDate && endDate && (
@@ -1004,6 +1021,7 @@ const ReservationForm = () => {
             type="submit"
             className={`px-6 py-3 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${
               loading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600"
+           
             }`}
             disabled={loading}
           >

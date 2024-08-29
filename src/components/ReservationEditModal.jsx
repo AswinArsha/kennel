@@ -19,6 +19,7 @@ const ReservationEditModal = ({ selectedReservation, isOpen, onClose, onSave }) 
     pickup: false,
     groom: false,
     drop: false,
+    advance_amount: 0, // Added advance_amount field
   });
 
   const [petInfo, setPetInfo] = useState({
@@ -54,6 +55,7 @@ const ReservationEditModal = ({ selectedReservation, isOpen, onClose, onSave }) 
             customer_address: reservationData.customers.customer_address,
             start_date: new Date(reservationData.start_date),
             end_date: new Date(reservationData.end_date),
+            advance_amount: reservationData.advance_amount || 0, // Set advance_amount from the fetched data
           });
         } else {
           console.error("Error fetching reservation info:", reservationError);
@@ -113,6 +115,7 @@ const ReservationEditModal = ({ selectedReservation, isOpen, onClose, onSave }) 
           pickup: reservationInfo.pickup,
           groom: reservationInfo.groom,
           drop: reservationInfo.drop,
+          advance_amount: reservationInfo.advance_amount, // Update advance_amount
         })
         .eq("id", selectedReservation.id);
 
@@ -257,6 +260,20 @@ const ReservationEditModal = ({ selectedReservation, isOpen, onClose, onSave }) 
                   }
                   dateFormat="yyyy-MM-dd"
                   className="w-full p-2 border rounded-md"
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="block font-semibold">Advance Paid</label>
+                <input
+                  type="number"
+                  className="w-full p-2 border rounded-md"
+                  value={reservationInfo.advance_amount}
+                  onChange={(e) =>
+                    setReservationInfo({
+                      ...reservationInfo,
+                      advance_amount: parseFloat(e.target.value) || 0,
+                    })
+                  }
                 />
               </div>
               <div className="col-span-2">

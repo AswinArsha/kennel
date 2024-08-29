@@ -89,18 +89,22 @@ const FeedingSchedule = () => {
       kennel_id: kennel.id,
       feeding_date: formatDate(selectedDate),
       feeding_time: feedingTime,
-      fed: true,
-      eaten: true,
+      fed: !fedKennels.includes(kennel.id),
+      eaten: !fedKennels.includes(kennel.id), // Assuming eaten follows fed status
     }));
 
-    const { error } = await supabase.from("feeding_schedule").insert(feedingRecords);
+    const { error } = await supabase.from("feeding_schedule").upsert(feedingRecords, {
+      onConflict: ['kennel_id', 'feeding_date', 'feeding_time'],
+    });
 
     if (error) {
       console.error("Error inserting feeding status:", error.message);
     } else {
-      // Update chicken stock
-      const newStock = chickenStock - (selectedKennels.length * 0.25);
-      await updateChickenStock(newStock);
+      // Update chicken stock only if the kennels are being fed
+      if (!selectedKennels.some((kennel) => fedKennels.includes(kennel.id))) {
+        const newStock = chickenStock - (selectedKennels.length * 0.25);
+        await updateChickenStock(newStock);
+      }
 
       // Reset state after successful submission
       setSelectedKennels([]);
@@ -182,7 +186,9 @@ const FeedingSchedule = () => {
                       key={kennel.id}
                       className={`p-4 text-center rounded-lg cursor-pointer transition-all shadow-md ${
                         fedKennels.includes(kennel.id)
-                          ? "bg-green-500 text-white"
+                          ? selectedKennels.includes(kennel)
+                            ? "bg-blue-500 text-white"
+                            : "bg-green-500 text-white"
                           : selectedKennels.includes(kennel)
                           ? "bg-blue-500 text-white"
                           : "bg-gray-200 hover:bg-gray-300"

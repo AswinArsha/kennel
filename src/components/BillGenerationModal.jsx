@@ -11,6 +11,7 @@ const BillGenerationModal = ({ isOpen, onClose, selectedReservation, onCheckoutS
   const [daysStayed, setDaysStayed] = useState(0);
   const [customerName, setCustomerName] = useState("");
   const [customerDetails, setCustomerDetails] = useState({});
+  const [advanceAmount, setAdvanceAmount] = useState(0);
 
   useEffect(() => {
     if (selectedReservation) {
@@ -20,10 +21,14 @@ const BillGenerationModal = ({ isOpen, onClose, selectedReservation, onCheckoutS
         (endDate - startDate) / (1000 * 60 * 60 * 24) + 1
       );
       setDaysStayed(calculatedDaysStayed);
-      setTotalBill(calculatedDaysStayed * perDayBill);
 
-      // Fetch customer details using customer_id from selectedReservation
+      // Fetch customer details and advance payment using customer_id from selectedReservation
       fetchCustomerDetails(selectedReservation.customer_id);
+      const advance = selectedReservation.advance_amount || 0;
+      setAdvanceAmount(advance);
+
+      // Calculate the total bill by subtracting the advance amount
+      setTotalBill(calculatedDaysStayed * perDayBill - advance);
     }
   }, [selectedReservation, perDayBill]);
 
@@ -52,7 +57,7 @@ const BillGenerationModal = ({ isOpen, onClose, selectedReservation, onCheckoutS
     const value = event.target.value === "" ? "" : parseInt(event.target.value, 10);
     if (value === "" || !isNaN(value)) {
       setPerDayBill(value);
-      setTotalBill(daysStayed * value);
+      setTotalBill(daysStayed * value - advanceAmount);
     }
   };
 
@@ -257,6 +262,7 @@ const BillGenerationModal = ({ isOpen, onClose, selectedReservation, onCheckoutS
             {new Date(selectedReservation.end_date).toDateString()}
           </p>
           <p className="text-gray-600">Number of Days: {daysStayed}</p>
+          <p className="text-gray-600">Advance Pay: ₹{advanceAmount}</p>
         </div>
         <div className="mb-4">
           <label

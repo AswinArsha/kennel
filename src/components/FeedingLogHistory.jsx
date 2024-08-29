@@ -165,14 +165,14 @@ const FeedingLogHistory = () => {
 
       <button
         onClick={clearFilters}
-        className="bg-gray-200 mt-0 lg:mt-2 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="bg-red-500 text-white py-3 px-5 rounded-lg hover:bg-red-600 "
       >
-        Clear Filters
+        Clear 
       </button>
 
       <button
         onClick={downloadPDF}
-        className="bg-blue-500 mt-0 lg:mt-2 hover:bg-blue-600 text-white flex items-center px-4 py-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="bg-blue-500  hover:bg-blue-600 py-3 px-5 text-white flex items-center rounded-lg "
       >
         <FaDownload className="mr-2" />
         Download PDF

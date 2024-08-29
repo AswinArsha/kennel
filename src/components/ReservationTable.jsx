@@ -112,6 +112,9 @@ const ReservationTable = ({
               Status
             </th>
             <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
+              Advanced Paid
+            </th>
+            <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
               Actions
             </th>
           </tr>
@@ -183,6 +186,9 @@ const ReservationTable = ({
                     ? "check in"
                     : reservation.status}
                 </span>
+              </td>
+              <td className="whitespace-nowrap px-4 text-center py-2 text-gray-700">
+                {reservation.advance_amount ? reservation.advance_amount.toFixed(2) : "0.00"}
               </td>
               <td className="whitespace-nowrap px-4 py-2 text-gray-800">
                 {reservation.status === "reserved" && (
