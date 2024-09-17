@@ -165,8 +165,8 @@ const FeedingSchedule = () => {
 
       {selectedDate && (
         <div>
-          <h3 className="text-xl font-medium mb-4">Occupied Kennels</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+       
+          <div className=" mt-2 grid grid-cols-1 gap-6">
             {occupiedKennels.reduce((acc, kennel) => {
               const setIndex = acc.findIndex(
                 (item) => item.name === kennel.set_name
@@ -180,7 +180,7 @@ const FeedingSchedule = () => {
             }, []).map((set) => (
               <div key={set.name}>
                 <h4 className="text-lg font-semibold mb-2">{set.name}</h4>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-8 gap-4">
                   {set.kennels.map((kennel) => (
                     <div
                       key={kennel.id}

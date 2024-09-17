@@ -1056,7 +1056,7 @@ const ReservationForm = () => {
               <input
                 type="number"
                 id="advanceAmount"
-                className="w-[50%] p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-[50%] p-3 border rounded-md  focus:outline-none focus:ring-2 focus:ring-blue-500 border-gray-300"
                 {...register("advanceAmount")}
               />
             </div>
