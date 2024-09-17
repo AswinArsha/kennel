@@ -540,58 +540,72 @@ const ReservationForm = () => {
   };
 
   const fetchAvailableKennels = async () => {
+    // Fetch all kennels that are not under maintenance
     const { data: kennels, error: kennelError } = await supabase
       .from("kennels")
       .select("*")
       .neq("set_name", "Maintenance")
       .order("created_at", { ascending: true });
-
+  
     if (kennelError) {
       console.error("Error fetching kennels:", kennelError.message);
       return;
     }
-
+  
+    // Fetch all current reservations to check occupied kennels and their checkout dates
     const { data: reservations, error: reservationError } = await supabase
       .from("reservations")
       .select("kennel_ids, start_date, end_date");
-
+  
     if (reservationError) {
       console.error("Error fetching reservations:", reservationError.message);
       return;
     }
-
-    const availableKennels = kennels.filter((kennel) => {
+  
+    const availableKennels = kennels.map((kennel) => {
+      // Check if the kennel is reserved
       const conflictingReservations = reservations.filter((reservation) => {
-        return (
-          reservation.kennel_ids.includes(kennel.id) &&
-          new Date(reservation.start_date).toDateString() === new Date(startDate).toDateString() &&
-          new Date(reservation.end_date).toDateString() === new Date(endDate).toDateString()
-        );
+        return reservation.kennel_ids.includes(kennel.id);
       });
-      return conflictingReservations.length === 0;
+  
+      if (conflictingReservations.length > 0) {
+        // If reserved, attach the checkout date to the kennel info
+        return {
+          ...kennel,
+          occupied: true,
+          checkoutDate: new Date(conflictingReservations[0].end_date),
+        };
+      } else {
+        // If not reserved, it's available
+        return {
+          ...kennel,
+          occupied: false,
+        };
+      }
     });
-
+  
     setAvailableKennels(availableKennels);
   };
+  
 
   const createReservation = async (data) => {
     if (validateForm(data)) {
       setLoading(true);
       let customerData;
-
+  
       const { data: existingCustomers, error: fetchCustomerError } =
         await supabase
           .from("customers")
           .select("*")
           .eq("customer_phone", data.customerPhone);
-
+  
       if (fetchCustomerError) {
         console.error("Error fetching customer:", fetchCustomerError.message);
         toast.error("Failed to fetch customer details.", { position: "bottom-center" });
         setLoading(false);
         return;
       }
-
+  
       if (existingCustomers.length > 0) {
         customerData = existingCustomers[0];
       } else {
@@ -605,21 +619,23 @@ const ReservationForm = () => {
             },
           ])
           .select();
-
+  
         if (newCustomerError) {
           console.error("Error creating customer:", newCustomerError.message);
           toast.error("Failed to create customer.", { position: "bottom-center" });
           setLoading(false);
           return;
         }
-
+  
         customerData = newCustomer[0];
       }
-
+  
       const reservationStatus =
         data.endDate < new Date() ? "checked_out" : "reserved";
-
+  
       for (const pet of pets) {
+        const advanceAmount = data.advanceAmount ? parseFloat(data.advanceAmount) : 0; // Default to 0 if empty
+  
         const { error: reservationError } = await supabase
           .from("reservations")
           .insert({
@@ -633,14 +649,11 @@ const ReservationForm = () => {
             pickup: pet.pickup,
             groom: pet.groom,
             drop: pet.drop,
-            advance_amount: data.advanceAmount, // Save the advance amount
+            advance_amount: advanceAmount, // Ensure numeric value is passed
           });
-
+  
         if (reservationError) {
-          console.error(
-            "Error creating reservation:",
-            reservationError.message
-          );
+          console.error("Error creating reservation:", reservationError.message);
           toast.error("Failed to create reservation.", { position: "bottom-center" });
           setLoading(false);
           return;
@@ -650,20 +663,18 @@ const ReservationForm = () => {
             .select("status")
             .eq("id", pet.kennel.id)
             .single();
-
+  
           if (fetchKennelError) {
             console.error("Error fetching kennel status:", fetchKennelError.message);
             toast.error("Failed to update kennel status.", { position: "bottom-center" });
             setLoading(false);
             return;
           }
-
+  
           const currentStatus = kennelData.status;
           const newStatus =
-            reservationStatus === "checked_out"
-              ? "available"
-              : reservationStatus;
-
+            reservationStatus === "checked_out" ? "available" : reservationStatus;
+  
           if (
             (currentStatus === "available" && newStatus === "reserved") ||
             (currentStatus === "reserved" && newStatus === "occupied") ||
@@ -676,12 +687,13 @@ const ReservationForm = () => {
           }
         }
       }
-
+  
       toast.success("Reservation created successfully!", { position: "bottom-center" });
       clearForm();
       setLoading(false);
     }
   };
+  
 
   const toUTCDate = (date) => {
     const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
@@ -794,7 +806,7 @@ const ReservationForm = () => {
         Create Reservation
       </h2>
       <form onSubmit={handleSubmit(createReservation)}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 ">
           <div>
             <div className="mb-4">
               <label
@@ -939,17 +951,17 @@ const ReservationForm = () => {
                 </p>
               )}
             </div>
-            <div className="mb-4">
+            <div className="mb-4 ">
               <label
                 htmlFor="advanceAmount"
-                className="block text-sm font-medium text-gray-700"
+                className="block text-sm font-medium text-gray-700 "
               >
                 Advance Amount
               </label>
               <input
                 type="number"
                 id="advanceAmount"
-                className="w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-[50%] p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 {...register("advanceAmount")}
               />
             </div>
@@ -963,43 +975,51 @@ const ReservationForm = () => {
             {availableKennels.length === 0 && (
               <p className="text-gray-500">No kennels available</p>
             )}
-            {availableKennels.length > 0 &&
-              availableKennels
-                .reduce((acc, kennel) => {
-                  const setIndex = acc.findIndex(
-                    (item) => item.name === kennel.set_name
-                  );
-                  if (setIndex === -1) {
-                    acc.push({ name: kennel.set_name, kennels: [kennel] });
-                  } else {
-                    acc[setIndex].kennels.push(kennel);
-                  }
-                  return acc;
-                }, [])
-                .map((set) => (
-                  <div key={set.name} className="mb-6">
-                    <h4 className="text-lg font-semibold mb-2">{set.name}</h4>
-                    <div className="grid grid-cols-8 gap-6 ">
-                      {set.kennels
-                        .sort(
-                          (a, b) => a.kennel_number - b.kennel_number
-                        )
-                        .map((kennel) => (
-                          <div
-                            key={kennel.id}
-                            className={`p-4 text-center rounded-md cursor-pointer transition-all aspect-square ${
-                              selectedKennels.includes(kennel)
-                                ? "bg-blue-500 text-white"
-                                : "bg-gray-200 hover:bg-gray-300"
-                            }`}
-                            onClick={() => handleKennelSelection(kennel)}
-                          >
-                            Kennel {kennel.kennel_number}
-                          </div>
-                        ))}
-                    </div>
+     {availableKennels.length > 0 &&
+  availableKennels
+    .reduce((acc, kennel) => {
+      const setIndex = acc.findIndex(
+        (item) => item.name === kennel.set_name
+      );
+      if (setIndex === -1) {
+        acc.push({ name: kennel.set_name, kennels: [kennel] });
+      } else {
+        acc[setIndex].kennels.push(kennel);
+      }
+      return acc;
+    }, [])
+    .map((set) => (
+      <div key={set.name} className="mb-6">
+        <h4 className="text-lg font-semibold mb-2">{set.name}</h4>
+        <div className="grid grid-cols-8 gap-6 ">
+          {set.kennels
+            .sort((a, b) => a.kennel_number - b.kennel_number)
+            .map((kennel) => (
+              <div
+                key={kennel.id}
+                className={`p-4 text-center rounded-md cursor-pointer transition-all aspect-square ${
+                  selectedKennels.includes(kennel)
+                    ? "bg-blue-500 text-white"
+                    : kennel.occupied
+                    ? "bg-red-500 text-white" // Indicate the kennel is occupied
+                    : "bg-gray-200 hover:bg-gray-300"
+                }`}
+                onClick={() => handleKennelSelection(kennel)}
+              >
+                <div>
+                  Kennel {kennel.kennel_number}
+                </div>
+                {kennel.occupied && (
+                  <div className="text-sm text-white mt-2">
+                    {kennel.checkoutDate.toDateString()}
                   </div>
-                ))}
+                )}
+              </div>
+            ))}
+        </div>
+      </div>
+    ))}
+
             {errors.selectedKennels && (
               <p className="text-red-500 text-sm mt-1">
                 {errors.selectedKennels.message}
