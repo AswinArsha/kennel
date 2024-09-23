@@ -32,20 +32,22 @@ const ReservationEditModal = ({ selectedReservation, isOpen, onClose, onSave }) 
     const fetchInfo = async () => {
       if (selectedReservation) {
         const { data: reservationData, error: reservationError } =
-          await supabase
-            .from("reservations")
-            .select(
-              `
-            *,
-            customers:customer_id (
-              customer_name,
-              customer_phone,
-              customer_address
-            )
-          `
-            )
-            .eq("id", selectedReservation.id)
-            .single();
+        await supabase
+          .from("reservations")
+          .select(
+            `
+          *,
+          customers:customer_id (
+            customer_name,
+            customer_phone,
+            customer_address
+          ),
+          payment_mode
+        `
+          )
+          .eq("id", selectedReservation.id)
+          .single();
+      
 
         if (!reservationError && reservationData) {
           setReservationInfo({
@@ -55,8 +57,10 @@ const ReservationEditModal = ({ selectedReservation, isOpen, onClose, onSave }) 
             customer_address: reservationData.customers.customer_address,
             start_date: new Date(reservationData.start_date),
             end_date: new Date(reservationData.end_date),
-            advance_amount: reservationData.advance_amount || 0, // Set advance_amount from the fetched data
+            advance_amount: reservationData.advance_amount || 0,
+            payment_mode: reservationData.payment_mode || "", // Include payment_mode
           });
+          
         } else {
           console.error("Error fetching reservation info:", reservationError);
         }
@@ -103,21 +107,23 @@ const ReservationEditModal = ({ selectedReservation, isOpen, onClose, onSave }) 
         })
         .eq("id", reservationInfo.customer_id);
 
-      const { error: reservationError } = await supabase
-        .from("reservations")
-        .update({
-          pet_name: reservationInfo.pet_name,
-          pet_breed: reservationInfo.pet_breed,
-          start_date: reservationInfo.start_date,
-          end_date: reservationInfo.end_date,
-          status: reservationInfo.status,
-          kennel_ids: reservationInfo.kennel_ids,
-          pickup: reservationInfo.pickup,
-          groom: reservationInfo.groom,
-          drop: reservationInfo.drop,
-          advance_amount: reservationInfo.advance_amount, // Update advance_amount
-        })
-        .eq("id", selectedReservation.id);
+     const { error: reservationError } = await supabase
+  .from("reservations")
+  .update({
+    pet_name: reservationInfo.pet_name,
+    pet_breed: reservationInfo.pet_breed,
+    start_date: reservationInfo.start_date,
+    end_date: reservationInfo.end_date,
+    status: reservationInfo.status,
+    kennel_ids: reservationInfo.kennel_ids,
+    pickup: reservationInfo.pickup,
+    groom: reservationInfo.groom,
+    drop: reservationInfo.drop,
+    advance_amount: reservationInfo.advance_amount, // Update advance_amount
+    payment_mode: reservationInfo.payment_mode, // Include payment_mode
+  })
+  .eq("id", selectedReservation.id);
+
 
       let petError = null;
       if (petInfo.id) {
@@ -276,6 +282,25 @@ const ReservationEditModal = ({ selectedReservation, isOpen, onClose, onSave }) 
                   }
                 />
               </div>
+              <div className="col-span-2">
+  <label className="block font-semibold">Advance Payment Mode</label>
+  <select
+    className="w-full p-2 border rounded-md"
+    value={reservationInfo.payment_mode}
+    onChange={(e) =>
+      setReservationInfo({
+        ...reservationInfo,
+        payment_mode: e.target.value,
+      })
+    }
+  >
+    <option value="">Select Payment Mode</option>
+    <option value="gpay">GPay</option>
+    <option value="cash">Cash</option>
+    <option value="swipe">Swipe</option>
+  </select>
+</div>
+
               <div className="col-span-2">
                 <label className="block font-semibold">Dietary Requirements</label>
                 <textarea

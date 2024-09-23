@@ -28,7 +28,8 @@ const CustomerTable = ({
           kennel_ids,
           pickup,
           groom,
-          drop
+          drop,
+          payment_mode
         `
       );
 
@@ -175,6 +176,9 @@ const CustomerTable = ({
                   Total Bill 
                 </th>
                 <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
+                  Payment Mode {/* Add payment mode header */}
+                </th>
+                <th className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
                   Status
                 </th>
               </tr>
@@ -208,6 +212,9 @@ const CustomerTable = ({
                   </td>
                   <td className="whitespace-nowrap text-center px-4 py-2 text-gray-700">
                     {customer.total_bill !== null ? customer.total_bill : "N/A"}
+                  </td>
+                  <td className="whitespace-nowrap text-center px-4 py-2 text-gray-700">
+                    {customer.payment_mode ? customer.payment_mode : ""} {/* Show payment mode */}
                   </td>
                   <td className="whitespace-nowrap text-center px-4 py-2 text-gray-800">
                     <span

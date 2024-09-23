@@ -12,6 +12,7 @@ const BillGenerationModal = ({ isOpen, onClose, selectedReservation, onCheckoutS
   const [customerName, setCustomerName] = useState("");
   const [customerDetails, setCustomerDetails] = useState({});
   const [advanceAmount, setAdvanceAmount] = useState(0);
+  const [paymentMode, setPaymentMode] = useState(""); // Add payment mode state
 
   useEffect(() => {
     if (selectedReservation) {
@@ -90,7 +91,6 @@ const BillGenerationModal = ({ isOpen, onClose, selectedReservation, onCheckoutS
             customer_name: customerData.customer_name,
             customer_phone: customerData.customer_phone,
             customer_address: customerData.customer_address,
-  
             pet_name: selectedReservation.pet_name,
             pet_breed: selectedReservation.pet_breed,
             start_date: selectedReservation.start_date,
@@ -109,7 +109,7 @@ const BillGenerationModal = ({ isOpen, onClose, selectedReservation, onCheckoutS
         throw analyticsError;
       }
   
-      // Insert into historical reservations table
+      // Insert into historical reservations table, including payment_mode
       const { error: historicalError } = await supabase
         .from("historical_reservations")
         .insert([
@@ -124,6 +124,7 @@ const BillGenerationModal = ({ isOpen, onClose, selectedReservation, onCheckoutS
             pickup: selectedReservation.pickup,
             groom: selectedReservation.groom,
             drop: selectedReservation.drop,
+            payment_mode: paymentMode, // Add payment mode here
           },
         ]);
   
@@ -231,6 +232,7 @@ const BillGenerationModal = ({ isOpen, onClose, selectedReservation, onCheckoutS
         <h2 className="text-2xl font-bold mb-4 text-gray-800">
           Bill Generation
         </h2>
+        <div className="flex space-x-36">
         <div className="mb-4">
           <h3 className="text-lg font-semibold text-gray-700 mb-2">
             Customer Details:
@@ -263,7 +265,7 @@ const BillGenerationModal = ({ isOpen, onClose, selectedReservation, onCheckoutS
           </p>
           <p className="text-gray-600">Number of Days: {daysStayed}</p>
           <p className="text-gray-600">Advance Pay: ₹{advanceAmount}</p>
-        </div>
+        </div></div>
         <div className="mb-4">
           <label
             htmlFor="perDayBill"
@@ -294,6 +296,28 @@ const BillGenerationModal = ({ isOpen, onClose, selectedReservation, onCheckoutS
             className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
+        
+        {/* Payment Mode Select */}
+        <div className="mb-4">
+          <label
+            htmlFor="paymentMode"
+            className="block text-gray-700 font-semibold mb-2"
+          >
+            Payment Mode
+          </label>
+          <select
+            id="paymentMode"
+            value={paymentMode}
+            onChange={(e) => setPaymentMode(e.target.value)}
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Select Payment Mode</option>
+            <option value="gpay">GPay</option>
+            <option value="cash">Cash</option>
+            <option value="swipe">Swipe</option>
+          </select>
+        </div>
+
         <button
           onClick={handleCheckout}
           className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition duration-300 ease-in-out"

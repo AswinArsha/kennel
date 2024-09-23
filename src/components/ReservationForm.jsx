@@ -745,6 +745,7 @@ const ReservationForm = () => {
             groom: pet.groom,
             drop: pet.drop,
             advance_amount: advanceAmount, // Ensure numeric value is passed
+            payment_mode: data.paymentMode, // Insert the selected payment mode
           });
   
         if (reservationError) {
@@ -752,34 +753,6 @@ const ReservationForm = () => {
           toast.error("Failed to create reservation.", { position: "bottom-center" });
           setLoading(false);
           return;
-        } else {
-          const { data: kennelData, error: fetchKennelError } = await supabase
-            .from("kennels")
-            .select("status")
-            .eq("id", pet.kennel.id)
-            .single();
-  
-          if (fetchKennelError) {
-            console.error("Error fetching kennel status:", fetchKennelError.message);
-            toast.error("Failed to update kennel status.", { position: "bottom-center" });
-            setLoading(false);
-            return;
-          }
-  
-          const currentStatus = kennelData.status;
-          const newStatus =
-            reservationStatus === "checked_out" ? "available" : reservationStatus;
-  
-          if (
-            (currentStatus === "available" && newStatus === "reserved") ||
-            (currentStatus === "reserved" && newStatus === "occupied") ||
-            (currentStatus === "available" && newStatus === "occupied")
-          ) {
-            await supabase
-              .from("kennels")
-              .update({ status: newStatus })
-              .eq("id", pet.kennel.id);
-          }
         }
       }
   
@@ -1060,6 +1033,28 @@ const ReservationForm = () => {
                 {...register("advanceAmount")}
               />
             </div>
+            <div className="mb-4">
+  <label
+    htmlFor="paymentMode"
+    className="block text-sm font-medium text-gray-700"
+  >
+    Advance Payment Mode
+  </label>
+  <select
+    id="paymentMode"
+    className="w-[50%] p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 border-gray-300"
+    {...register("paymentMode")} 
+  >
+    <option value="">Select Payment Mode</option>
+    <option value="gpay">GPay</option>
+    <option value="cash">Cash</option>
+    <option value="swipe">Swipe</option>
+  </select>
+  {errors.paymentMode && (
+    <p className="text-red-500 text-sm mt-1">{errors.paymentMode.message}</p>
+  )}
+</div>
+
           </div>
           
         </div>

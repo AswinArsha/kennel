@@ -1,3 +1,4 @@
+// ReservationFilter.jsx
 import React from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -11,37 +12,8 @@ const ReservationFilter = ({
   onSearchChange,
   onDateFilter,
   onStatusFilterChange,
-  setFilterStartDate,
-  setFilterEndDate,
-  setFilterStatus,
-  filterReservations,
-  reservations,
+  handleClearFilters,
 }) => {
-  const handleStartDateChange = (date) => {
-    setFilterStartDate(date);
-    onDateFilter(date, filterEndDate);
-  };
-
-  const handleEndDateChange = (date) => {
-    setFilterEndDate(date);
-    onDateFilter(filterStartDate, date);
-  };
-
-  const handleStatusChange = (e) => {
-    setFilterStatus(e.target.value);
-    onStatusFilterChange(e.target.value);
-  };
-
-  const handleClearFilters = () => {
-    setFilterStartDate(null);
-    setFilterEndDate(null);
-    setFilterStatus("");
-    onSearchChange("");
-
-    // Immediately apply the clearing of filters
-    filterReservations(reservations, "", "", null, null);
-  };
-
   return (
     <div className="flex flex-col md:flex-row justify-between items-center mb-4 space-y-4 md:space-y-0">
       <div className="relative w-full md:w-1/3">
@@ -59,7 +31,7 @@ const ReservationFilter = ({
         <div className="relative w-full md:w-auto">
           <DatePicker
             selected={filterStartDate}
-            onChange={handleStartDateChange}
+            onChange={(date) => onDateFilter(date, filterEndDate)}
             className="p-3 pl-10 pr-4 border rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
             dateFormat="dd/MM/yyyy"
             placeholderText="Check In"
@@ -70,7 +42,7 @@ const ReservationFilter = ({
         <div className="relative w-full md:w-auto">
           <DatePicker
             selected={filterEndDate}
-            onChange={handleEndDateChange}
+            onChange={(date) => onDateFilter(filterStartDate, date)}
             className="p-3 pl-10 pr-4 border rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
             dateFormat="dd/MM/yyyy"
             placeholderText="Check Out"
@@ -82,12 +54,14 @@ const ReservationFilter = ({
         <div className="relative w-full md:w-auto">
           <select
             value={filterStatus}
-            onChange={handleStatusChange}
+            onChange={(e) => onStatusFilterChange(e.target.value)}
             className="p-3 pl-10 pr-4 border rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">All Status</option>
             <option value="reserved">Reserved</option>
             <option value="checkin">Check In</option>
+            {/* <option value="checkout">Check Out</option>
+            <option value="canceled">Canceled</option> */}
           </select>
           <FaFilter className="absolute top-1/2 left-3 transform -translate-y-1/2 text-gray-400" />
         </div>

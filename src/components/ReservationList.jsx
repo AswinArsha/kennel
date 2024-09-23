@@ -1,3 +1,4 @@
+// ReservationList.jsx
 import React, { useState, useEffect } from "react";
 import { supabase } from "../supabase";
 import ReservationFilter from "./ReservationFilter";
@@ -8,8 +9,8 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 const ReservationList = () => {
-  const [reservations, setReservations] = useState([]);
-  const [filteredReservations, setFilteredReservations] = useState([]);
+  const [allReservations, setAllReservations] = useState([]); // All fetched reservations
+  const [filteredReservations, setFilteredReservations] = useState([]); // After filtering
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStartDate, setFilterStartDate] = useState(null);
   const [filterEndDate, setFilterEndDate] = useState(null);
@@ -18,67 +19,96 @@ const ReservationList = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
 
+  // Pagination States
+  const [currentPage, setCurrentPage] = useState(1);
+  const reservationsPerPage = 10; // Fixed per page
+  const [loading, setLoading] = useState(false);
+
+  // Fetch Reservations on Component Mount
+  useEffect(() => {
+    fetchReservations();
+  }, []);
+
+  // Fetch Reservations from Supabase
   const fetchReservations = async () => {
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from("reservations")
-        .select(
-          "*, kennel_ids, customers:customer_id (customer_name, customer_phone)"
-        )
+        .select("*, customers:customer_id (customer_name, customer_phone), payment_mode")
         .order("created_at", { ascending: false });
-
+  
       if (error) {
-        throw new Error("Error fetching reservations:", error.message);
+        throw new Error(`Error fetching reservations: ${error.message}`);
       }
-
-      for (const reservation of data) {
-        const kennelNumbers = await fetchKennelNumbers(reservation.kennel_ids);
-        reservation.kennel_numbers = kennelNumbers.join(", ");
-      }
-
-      setReservations(data);
-      filterReservations(data);
+  
+      // Fetch kennel_numbers for all reservations
+      const reservationsWithKennelNumbers = await Promise.all(
+        data.map(async (reservation) => {
+          const kennelNumbers = await fetchKennelNumbers(reservation.kennel_ids);
+          return {
+            ...reservation,
+            kennel_numbers: kennelNumbers,
+          };
+        })
+      );
+  
+      setAllReservations(reservationsWithKennelNumbers);
+      setFilteredReservations(reservationsWithKennelNumbers);
+      setCurrentPage(1); // Reset to first page after fetching
     } catch (error) {
-      console.error("Fetch reservations error:", error.message);
-      // Handle error gracefully (e.g., show error message)
+      console.error(error.message);
+      toast.error("Failed to fetch reservations.");
+    } finally {
+      setLoading(false);
     }
   };
+  
 
+  // Fetch Kennel Numbers Based on kennel_ids
   const fetchKennelNumbers = async (kennel_ids) => {
-    if (!kennel_ids) return [];
+    if (!kennel_ids || kennel_ids.length === 0) return [];
     const { data, error } = await supabase
       .from("kennels")
       .select("kennel_number")
       .in("id", kennel_ids);
 
     if (error) {
-      console.error("Error fetching kennel numbers:", error.message);
+      console.error(`Error fetching kennel numbers: ${error.message}`);
       return [];
     }
 
     return data.map((k) => k.kennel_number);
   };
 
+  // Confirm Reservation (Check-in)
   const confirmReservation = async (reservation) => {
-    const { error } = await supabase
-      .from("reservations")
-      .update({ status: "checkin" })
-      .eq("id", reservation.id);
+    try {
+      const { error } = await supabase
+        .from("reservations")
+        .update({ status: "checkin" })
+        .eq("id", reservation.id);
 
-    if (!error) {
+      if (error) {
+        throw new Error(`Error updating reservation status: ${error.message}`);
+      }
+
+      // Update kennel status to 'occupied'
       await Promise.all(
         reservation.kennel_ids.map((kennelId) =>
-          supabase
-            .from("kennels")
-            .update({ status: "occupied" })
-            .eq("id", kennelId)
+          supabase.from("kennels").update({ status: "occupied" }).eq("id", kennelId)
         )
       );
-      fetchReservations();
+
       toast.success("Reservation checked in successfully!");
+      fetchReservations(); // Refresh data
+    } catch (error) {
+      console.error(error.message);
+      toast.error("Failed to check in reservation.");
     }
   };
 
+  // Cancel Reservation
   const cancelReservation = async (reservation) => {
     try {
       // Update kennel status to 'available'
@@ -90,30 +120,28 @@ const ReservationList = () => {
             .eq("id", kennelId);
 
           if (kennelError) {
-            throw new Error(`Failed to update kennel ${kennelId} status`);
+            throw new Error(`Failed to update kennel ${kennelId} status: ${kennelError.message}`);
           }
         })
       );
 
-      // Move reservation to historical_reservations with status 'cancelled'
-      const { error: moveError } = await supabase
-        .from("historical_reservations")
-        .insert({
-          customer_id: reservation.customer_id,
-          pet_name: reservation.pet_name,
-          pet_breed: reservation.pet_breed,
-          start_date: reservation.start_date,
-          end_date: reservation.end_date,
-          status: "canceled",
-          kennel_ids: reservation.kennel_ids,
-          pickup: reservation.pickup,
-          groom: reservation.groom,
-          drop: reservation.drop,
-          created_at: reservation.created_at,
-        });
+      // Move reservation to historical_reservations with status 'canceled'
+      const { error: moveError } = await supabase.from("historical_reservations").insert({
+        customer_id: reservation.customer_id,
+        pet_name: reservation.pet_name,
+        pet_breed: reservation.pet_breed,
+        start_date: reservation.start_date,
+        end_date: reservation.end_date,
+        status: "canceled",
+        kennel_ids: reservation.kennel_ids,
+        pickup: reservation.pickup,
+        groom: reservation.groom,
+        drop: reservation.drop,
+        created_at: reservation.created_at,
+      });
 
       if (moveError) {
-        throw new Error("Failed to move reservation to historical_reservations");
+        throw new Error(`Failed to move reservation: ${moveError.message}`);
       }
 
       // Delete reservation from reservations table
@@ -123,100 +151,116 @@ const ReservationList = () => {
         .eq("id", reservation.id);
 
       if (deleteError) {
-        throw new Error("Failed to delete reservation from reservations");
+        throw new Error(`Failed to delete reservation: ${deleteError.message}`);
       }
 
-      // Refresh reservations list
-      await fetchReservations();
-      toast.success("Reservation canceled!");
+      toast.success("Reservation canceled successfully!");
+      fetchReservations(); // Refresh data
     } catch (error) {
-      console.error("Cancel reservation error:", error.message);
-      // Handle error gracefully (e.g., show error message)
+      console.error(error.message);
+      toast.error("Failed to cancel reservation.");
     }
   };
 
+  // Handle Checkout (from ReservationTable)
+  const handleCheckout = async (reservation) => {
+    setSelectedReservation(reservation);
+    setIsCheckoutModalOpen(true);
+
+    try {
+      await deleteFeedingInformation(reservation);
+      fetchReservations(); // Refresh data after checkout
+    } catch (error) {
+      console.error("Error deleting feeding information:", error.message);
+      toast.error("Failed to delete feeding information.");
+    }
+  };
+
+  // Delete Feeding Information
   const deleteFeedingInformation = async (reservation) => {
     if (!reservation.kennel_ids || reservation.kennel_ids.length === 0) {
       return;
     }
 
-    // Identify kennel_ids associated with the reservation
     const kennelIds = reservation.kennel_ids;
 
-    // Construct queries to delete feeding_schedule entries for each kennel_id
-    for (const kennelId of kennelIds) {
-      const { error } = await supabase
-        .from("feeding_schedule")
-        .delete()
-        .eq("kennel_id", kennelId);
-
-      if (error) {
-        console.error(
-          `Failed to delete feeding information for kennel_id ${kennelId}:`,
-          error.message
-        );
-        // Handle error gracefully (e.g., show error message)
-      }
+    try {
+      await Promise.all(
+        kennelIds.map((kennelId) =>
+          supabase.from("feeding_schedule").delete().eq("kennel_id", kennelId)
+        )
+      );
+    } catch (error) {
+      throw new Error(`Failed to delete feeding information: ${error.message}`);
     }
   };
 
+  // Filtering Logic
   useEffect(() => {
-    fetchReservations();
-  }, []);
+    filterReservations();
+    setCurrentPage(1); // Reset to first page after filtering
+  }, [allReservations, searchQuery, filterStartDate, filterEndDate, filterStatus]);
 
-  const handleFilterStartDateChange = (date) => {
-    setFilterStartDate(date);
-    filterReservations(reservations, searchQuery, filterStatus, date, filterEndDate);
-  };
+  const filterReservations = () => {
+    let filtered = [...allReservations];
 
-  const handleFilterEndDateChange = (date) => {
-    setFilterEndDate(date);
-    filterReservations(reservations, searchQuery, filterStatus, filterStartDate, date);
-  };
+    // Search Filter
+    if (searchQuery) {
+      const lowerQuery = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (reservation) =>
+          reservation.customers.customer_name.toLowerCase().includes(lowerQuery) ||
+          reservation.pet_name.toLowerCase().includes(lowerQuery) ||
+          reservation.pet_breed.toLowerCase().includes(lowerQuery) ||
+          reservation.customers.customer_phone.toLowerCase().includes(lowerQuery)
+      );
+    }
 
-  const handleDateFilter = (startDate, endDate) => {
-    filterReservations(reservations, searchQuery, filterStatus, startDate, endDate);
-  };
+    // Status Filter
+    if (filterStatus) {
+      filtered = filtered.filter((reservation) => reservation.status === filterStatus);
+    }
 
-  const handleStatusFilterChange = (status) => {
-    setFilterStatus(status);
-    filterReservations(reservations, searchQuery, status, filterStartDate, filterEndDate);
-  };
+    // Date Filters
+    if (filterStartDate) {
+      filtered = filtered.filter(
+        (reservation) =>
+          new Date(reservation.start_date).setHours(0, 0, 0, 0) ===
+          filterStartDate.setHours(0, 0, 0, 0)
+      );
+    }
 
-  const handleSearchChange = (query) => {
-    setSearchQuery(query);
-    filterReservations(reservations, query, filterStatus, filterStartDate, filterEndDate);
-  };
+    if (filterEndDate) {
+      filtered = filtered.filter(
+        (reservation) =>
+          new Date(reservation.end_date).setHours(0, 0, 0, 0) ===
+          filterEndDate.setHours(0, 0, 0, 0)
+      );
+    }
 
-  const filterReservations = (
-    reservations,
-    query = searchQuery,
-    status = filterStatus,
-    startDate = filterStartDate,
-    endDate = filterEndDate
-  ) => {
-    const lowerQuery = query.toLowerCase();
-    const filtered = reservations.filter((reservation) => {
-      const matchesQuery =
-        reservation.customers.customer_name.toLowerCase().includes(lowerQuery) ||
-        reservation.pet_name.toLowerCase().includes(lowerQuery) ||
-        reservation.pet_breed.toLowerCase().includes(lowerQuery) ||
-        reservation.customers.customer_phone.toLowerCase().includes(lowerQuery);
-      const matchesStatus = status ? reservation.status === status : true;
-      const matchesCheckInDate =
-        startDate ? new Date(reservation.start_date).toDateString() === startDate.toDateString() : true;
-      const matchesCheckOutDate =
-        endDate ? new Date(reservation.end_date).toDateString() === endDate.toDateString() : true;
-      return matchesQuery && matchesStatus && matchesCheckInDate && matchesCheckOutDate && reservation.status !== "canceled";
-    });
+    // Exclude canceled reservations
+    filtered = filtered.filter((reservation) => reservation.status !== "canceled");
+
     setFilteredReservations(filtered);
   };
 
+  // Pagination Logic
+  const indexOfLastReservation = currentPage * reservationsPerPage;
+  const indexOfFirstReservation = indexOfLastReservation - reservationsPerPage;
+  const currentReservations = filteredReservations.slice(indexOfFirstReservation, indexOfLastReservation);
+  const totalPages = Math.ceil(filteredReservations.length / reservationsPerPage);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+  };
+
+  // Handle Checkout Success (from BillGenerationModal)
   const handleCheckoutSuccess = () => {
     fetchReservations();
     toast.success("Bill printed and checked out successfully!");
   };
 
+  // Handle Edit Modal Save
   const handleEditModalSave = () => {
     fetchReservations();
     setIsEditModalOpen(false);
@@ -228,37 +272,44 @@ const ReservationList = () => {
       <ToastContainer position="bottom-center" autoClose={2000} hideProgressBar={false} />
       <h2 className="text-2xl font-bold mb-4">Reservation List</h2>
       <ReservationFilter
-  searchQuery={searchQuery}
-  filterStartDate={filterStartDate}
-  filterEndDate={filterEndDate}
-  filterStatus={filterStatus}
-  onSearchChange={handleSearchChange}
-  onDateFilter={handleDateFilter}
-  onStatusFilterChange={handleStatusFilterChange}
-  setFilterStartDate={handleFilterStartDateChange}
-  setFilterEndDate={handleFilterEndDateChange}
-  setFilterStatus={setFilterStatus}
-  filterReservations={filterReservations}  // Pass this function as a prop
-  reservations={reservations}  // Also pass down the reservations array
-/>
+        searchQuery={searchQuery}
+        filterStartDate={filterStartDate}
+        filterEndDate={filterEndDate}
+        filterStatus={filterStatus}
+        onSearchChange={setSearchQuery}
+        onDateFilter={(start, end) => {
+          setFilterStartDate(start);
+          setFilterEndDate(end);
+        }}
+        onStatusFilterChange={setFilterStatus}
+        handleClearFilters={() => {
+          setSearchQuery("");
+          setFilterStartDate(null);
+          setFilterEndDate(null);
+          setFilterStatus("");
+        }}
+      />
 
       <ReservationTable
-        reservations={filteredReservations}
+        reservations={currentReservations}
+        loading={loading}
         onConfirm={confirmReservation}
         onCancel={cancelReservation}
         onEdit={(reservation) => {
           setSelectedReservation(reservation);
           setIsEditModalOpen(true);
         }}
-        onCheckout={(reservation) => {
-          setSelectedReservation(reservation);
-          setIsCheckoutModalOpen(true);
-        }}
+        onCheckout={handleCheckout}
         isCheckoutModalOpen={isCheckoutModalOpen}
         setIsCheckoutModalOpen={setIsCheckoutModalOpen}
         selectedReservation={selectedReservation}
         setSelectedReservation={setSelectedReservation}
+        currentPage={currentPage}
+        reservationsPerPage={reservationsPerPage}
+        totalReservations={filteredReservations.length}
+        handlePageChange={handlePageChange}
       />
+
       {isEditModalOpen && (
         <ReservationEditModal
           selectedReservation={selectedReservation}
