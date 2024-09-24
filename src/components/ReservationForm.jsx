@@ -1,3 +1,4 @@
+// ReservationForm.jsx
 import React, { useState, useEffect } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -681,26 +682,26 @@ const ReservationForm = () => {
   
     setAvailableKennels(availableKennels);
   };
-  
 
   const createReservation = async (data) => {
     if (validateForm(data)) {
       setLoading(true);
       let customerData;
-  
+
+      // Fetch existing customer or create a new one
       const { data: existingCustomers, error: fetchCustomerError } =
         await supabase
           .from("customers")
           .select("*")
           .eq("customer_phone", data.customerPhone);
-  
+
       if (fetchCustomerError) {
         console.error("Error fetching customer:", fetchCustomerError.message);
         toast.error("Failed to fetch customer details.", { position: "bottom-center" });
         setLoading(false);
         return;
       }
-  
+
       if (existingCustomers.length > 0) {
         customerData = existingCustomers[0];
       } else {
@@ -714,23 +715,24 @@ const ReservationForm = () => {
             },
           ])
           .select();
-  
+
         if (newCustomerError) {
           console.error("Error creating customer:", newCustomerError.message);
           toast.error("Failed to create customer.", { position: "bottom-center" });
           setLoading(false);
           return;
         }
-  
+
         customerData = newCustomer[0];
       }
-  
-      const reservationStatus =
-        data.endDate < new Date() ? "checked_out" : "reserved";
-  
+
+      // **Always set status to "reserved"**
+      const reservationStatus = "reserved";
+
+      // Insert reservations for each pet
       for (const pet of pets) {
         const advanceAmount = data.advanceAmount ? parseFloat(data.advanceAmount) : 0; // Default to 0 if empty
-  
+
         const { error: reservationError } = await supabase
           .from("reservations")
           .insert({
@@ -747,7 +749,7 @@ const ReservationForm = () => {
             advance_amount: advanceAmount, // Ensure numeric value is passed
             payment_mode: data.paymentMode, // Insert the selected payment mode
           });
-  
+
         if (reservationError) {
           console.error("Error creating reservation:", reservationError.message);
           toast.error("Failed to create reservation.", { position: "bottom-center" });
@@ -755,13 +757,12 @@ const ReservationForm = () => {
           return;
         }
       }
-  
+
       toast.success("Reservation created successfully!", { position: "bottom-center" });
       clearForm();
       setLoading(false);
     }
   };
-  
 
   const toUTCDate = (date) => {
     const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
@@ -795,6 +796,24 @@ const ReservationForm = () => {
     if (!data.endDate) {
       newErrors.endDate = "Please select Check Out date";
       isValid = false;
+    }
+
+    if (data.startDate && data.endDate) {
+      const today = new Date();
+      // Remove time components for accurate comparison
+      today.setHours(0, 0, 0, 0);
+      const selectedEndDate = new Date(data.endDate);
+      selectedEndDate.setHours(0, 0, 0, 0);
+
+      if (selectedEndDate < today) {
+        newErrors.endDate = "Check Out date cannot be in the past";
+        isValid = false;
+      }
+
+      if (data.endDate < data.startDate) {
+        newErrors.endDate = "Check Out date cannot be before Check In date";
+        isValid = false;
+      }
     }
 
     if (selectedKennels.length === 0) {
@@ -948,8 +967,6 @@ const ReservationForm = () => {
                 </p>
               )}
             </div>
-
-          
           </div>
 
           <div>
@@ -974,6 +991,7 @@ const ReservationForm = () => {
                       }`}
                       dateFormat="yyyy/MM/dd"
                       placeholderText="Select a start date"
+                     
                     />
                   )}
                 />
@@ -1007,7 +1025,7 @@ const ReservationForm = () => {
                       }`}
                       dateFormat="yyyy/MM/dd"
                       placeholderText="Select an end date"
-                      minDate={startDate} // Restrict to startDate or later
+                      minDate={startDate || new Date()} // Prevent selecting before startDate or past dates
                     />
                   )}
                 />
@@ -1019,6 +1037,7 @@ const ReservationForm = () => {
                 </p>
               )}
             </div>
+
             <div className="mb-4 ">
               <label
                 htmlFor="advanceAmount"
@@ -1033,30 +1052,29 @@ const ReservationForm = () => {
                 {...register("advanceAmount")}
               />
             </div>
-            <div className="mb-4">
-  <label
-    htmlFor="paymentMode"
-    className="block text-sm font-medium text-gray-700"
-  >
-    Advance Payment Mode
-  </label>
-  <select
-    id="paymentMode"
-    className="w-[50%] p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 border-gray-300"
-    {...register("paymentMode")} 
-  >
-    <option value="">Select Payment Mode</option>
-    <option value="gpay">GPay</option>
-    <option value="cash">Cash</option>
-    <option value="swipe">Swipe</option>
-  </select>
-  {errors.paymentMode && (
-    <p className="text-red-500 text-sm mt-1">{errors.paymentMode.message}</p>
-  )}
-</div>
 
+            <div className="mb-4">
+              <label
+                htmlFor="paymentMode"
+                className="block text-sm font-medium text-gray-700"
+              >
+                Advance Payment Mode
+              </label>
+              <select
+                id="paymentMode"
+                className="w-[50%] p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 border-gray-300"
+                {...register("paymentMode")}
+              >
+                <option value="">Select Payment Mode</option>
+                <option value="gpay">GPay</option>
+                <option value="cash">Cash</option>
+                <option value="swipe">Swipe</option>
+              </select>
+              {errors.paymentMode && (
+                <p className="text-red-500 text-sm mt-1">{errors.paymentMode.message}</p>
+              )}
+            </div>
           </div>
-          
         </div>
 
         {startDate && endDate && (
@@ -1065,50 +1083,50 @@ const ReservationForm = () => {
             {availableKennels.length === 0 && (
               <p className="text-gray-500">No kennels available</p>
             )}
-     {availableKennels.length > 0 &&
-  availableKennels
-    .reduce((acc, kennel) => {
-      const setIndex = acc.findIndex(
-        (item) => item.name === kennel.set_name
-      );
-      if (setIndex === -1) {
-        acc.push({ name: kennel.set_name, kennels: [kennel] });
-      } else {
-        acc[setIndex].kennels.push(kennel);
-      }
-      return acc;
-    }, [])
-    .map((set) => (
-      <div key={set.name} className="mb-6">
-        <h4 className="text-lg font-semibold mb-2">{set.name}</h4>
-        <div className="grid grid-cols-8 gap-6 ">
-          {set.kennels
-            .sort((a, b) => a.kennel_number - b.kennel_number)
-            .map((kennel) => (
-              <div
-                key={kennel.id}
-                className={`p-4 text-center rounded-md cursor-pointer transition-all aspect-square ${
-                  selectedKennels.includes(kennel)
-                    ? "bg-blue-500 text-white"
-                    : kennel.occupied
-                    ? "bg-red-500 text-white" // Indicate the kennel is occupied
-                    : "bg-gray-200 hover:bg-gray-300"
-                }`}
-                onClick={() => handleKennelSelection(kennel)}
-              >
-                <div>
-                  Kennel {kennel.kennel_number}
-                </div>
-                {kennel.occupied && (
-                  <div className="text-sm text-white mt-2">
-                    {kennel.checkoutDate.toDateString()}
+            {availableKennels.length > 0 &&
+              availableKennels
+                .reduce((acc, kennel) => {
+                  const setIndex = acc.findIndex(
+                    (item) => item.name === kennel.set_name
+                  );
+                  if (setIndex === -1) {
+                    acc.push({ name: kennel.set_name, kennels: [kennel] });
+                  } else {
+                    acc[setIndex].kennels.push(kennel);
+                  }
+                  return acc;
+                }, [])
+                .map((set) => (
+                  <div key={set.name} className="mb-6">
+                    <h4 className="text-lg font-semibold mb-2">{set.name}</h4>
+                    <div className="grid grid-cols-8 gap-6 ">
+                      {set.kennels
+                        .sort((a, b) => a.kennel_number - b.kennel_number)
+                        .map((kennel) => (
+                          <div
+                            key={kennel.id}
+                            className={`p-4 text-center rounded-md cursor-pointer transition-all aspect-square ${
+                              selectedKennels.includes(kennel)
+                                ? "bg-blue-500 text-white"
+                                : kennel.occupied
+                                ? "bg-red-500 text-white" // Indicate the kennel is occupied
+                                : "bg-gray-200 hover:bg-gray-300"
+                            }`}
+                            onClick={() => handleKennelSelection(kennel)}
+                          >
+                            <div>
+                              Kennel {kennel.kennel_number}
+                            </div>
+                            {kennel.occupied && (
+                              <div className="text-sm text-white mt-2">
+                                {kennel.checkoutDate.toDateString()}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                    </div>
                   </div>
-                )}
-              </div>
-            ))}
-        </div>
-      </div>
-    ))}
+                ))}
 
             {errors.selectedKennels && (
               <p className="text-red-500 text-sm mt-1">
@@ -1131,7 +1149,6 @@ const ReservationForm = () => {
             type="submit"
             className={`px-6 py-3 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${
               loading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600"
-           
             }`}
             disabled={loading}
           >

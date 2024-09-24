@@ -37,11 +37,11 @@ const ReservationList = () => {
         .from("reservations")
         .select("*, customers:customer_id (customer_name, customer_phone), payment_mode")
         .order("created_at", { ascending: false });
-  
+
       if (error) {
         throw new Error(`Error fetching reservations: ${error.message}`);
       }
-  
+
       // Fetch kennel_numbers for all reservations
       const reservationsWithKennelNumbers = await Promise.all(
         data.map(async (reservation) => {
@@ -52,7 +52,7 @@ const ReservationList = () => {
           };
         })
       );
-  
+
       setAllReservations(reservationsWithKennelNumbers);
       setFilteredReservations(reservationsWithKennelNumbers);
       setCurrentPage(1); // Reset to first page after fetching
@@ -63,7 +63,6 @@ const ReservationList = () => {
       setLoading(false);
     }
   };
-  
 
   // Fetch Kennel Numbers Based on kennel_ids
   const fetchKennelNumbers = async (kennel_ids) => {
@@ -94,11 +93,18 @@ const ReservationList = () => {
       }
 
       // Update kennel status to 'occupied'
-      await Promise.all(
-        reservation.kennel_ids.map((kennelId) =>
-          supabase.from("kennels").update({ status: "occupied" }).eq("id", kennelId)
-        )
+      const updateKennelsPromises = reservation.kennel_ids.map((kennelId) =>
+        supabase.from("kennels").update({ status: "occupied" }).eq("id", kennelId)
       );
+
+      const kennelResults = await Promise.all(updateKennelsPromises);
+
+      // Check for any errors during kennel updates
+      kennelResults.forEach(({ error }, index) => {
+        if (error) {
+          throw new Error(`Failed to update kennel ${reservation.kennel_ids[index]}: ${error.message}`);
+        }
+      });
 
       toast.success("Reservation checked in successfully!");
       fetchReservations(); // Refresh data
@@ -111,21 +117,31 @@ const ReservationList = () => {
   // Cancel Reservation
   const cancelReservation = async (reservation) => {
     try {
-      // Update kennel status to 'available'
-      await Promise.all(
-        reservation.kennel_ids.map(async (kennelId) => {
-          const { error: kennelError } = await supabase
-            .from("kennels")
-            .update({ status: "available" })
-            .eq("id", kennelId);
+      // Step 1: Delete related pet_information records
+      const { error: deletePetInfoError } = await supabase
+        .from("pet_information")
+        .delete()
+        .eq("reservation_id", reservation.id);
 
-          if (kennelError) {
-            throw new Error(`Failed to update kennel ${kennelId} status: ${kennelError.message}`);
-          }
-        })
+      if (deletePetInfoError) {
+        throw new Error(`Failed to delete pet information: ${deletePetInfoError.message}`);
+      }
+
+      // Step 2: Update kennel statuses to 'available'
+      const updateKennelsPromises = reservation.kennel_ids.map((kennelId) =>
+        supabase.from("kennels").update({ status: "available" }).eq("id", kennelId)
       );
 
-      // Move reservation to historical_reservations with status 'canceled'
+      const kennelResults = await Promise.all(updateKennelsPromises);
+
+      // Check for any errors during kennel updates
+      kennelResults.forEach(({ error }, index) => {
+        if (error) {
+          throw new Error(`Failed to update kennel ${reservation.kennel_ids[index]}: ${error.message}`);
+        }
+      });
+
+      // Step 3: Move reservation to historical_reservations with status 'canceled'
       const { error: moveError } = await supabase.from("historical_reservations").insert({
         customer_id: reservation.customer_id,
         pet_name: reservation.pet_name,
@@ -144,7 +160,7 @@ const ReservationList = () => {
         throw new Error(`Failed to move reservation: ${moveError.message}`);
       }
 
-      // Delete reservation from reservations table
+      // Step 4: Delete reservation from reservations table
       const { error: deleteError } = await supabase
         .from("reservations")
         .delete()
@@ -154,11 +170,12 @@ const ReservationList = () => {
         throw new Error(`Failed to delete reservation: ${deleteError.message}`);
       }
 
+      // Success: Notify user and refresh reservations
       toast.success("Reservation canceled successfully!");
       fetchReservations(); // Refresh data
     } catch (error) {
-      console.error(error.message);
-      toast.error("Failed to cancel reservation.");
+      console.error("Cancel reservation error:", error.message);
+      toast.error(`Failed to cancel reservation: ${error.message}`);
     }
   };
 

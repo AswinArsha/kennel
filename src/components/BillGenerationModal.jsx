@@ -1,3 +1,4 @@
+// BillGenerationModal.jsx
 import React, { useState, useEffect } from "react";
 import { supabase } from "../supabase";
 import Modal from "react-modal";
@@ -13,6 +14,7 @@ const BillGenerationModal = ({ isOpen, onClose, selectedReservation, onCheckoutS
   const [customerDetails, setCustomerDetails] = useState({});
   const [advanceAmount, setAdvanceAmount] = useState(0);
   const [paymentMode, setPaymentMode] = useState(""); // Add payment mode state
+  const [errors, setErrors] = useState({}); // For validation errors
 
   useEffect(() => {
     if (selectedReservation) {
@@ -32,6 +34,12 @@ const BillGenerationModal = ({ isOpen, onClose, selectedReservation, onCheckoutS
       setTotalBill(calculatedDaysStayed * perDayBill - advance);
     }
   }, [selectedReservation, perDayBill]);
+
+  useEffect(() => {
+    if (daysStayed && perDayBill) {
+      setTotalBill(daysStayed * perDayBill - advanceAmount);
+    }
+  }, [daysStayed, perDayBill, advanceAmount]);
 
   const fetchCustomerDetails = async (customerId) => {
     try {
@@ -56,9 +64,8 @@ const BillGenerationModal = ({ isOpen, onClose, selectedReservation, onCheckoutS
 
   const handlePerDayBillChange = (event) => {
     const value = event.target.value === "" ? "" : parseInt(event.target.value, 10);
-    if (value === "" || !isNaN(value)) {
+    if (value === "" || (!isNaN(value) && value >= 0)) { // Allow zero for cases where advance covers the total
       setPerDayBill(value);
-      setTotalBill(daysStayed * value - advanceAmount);
     }
   };
 
@@ -69,7 +76,37 @@ const BillGenerationModal = ({ isOpen, onClose, selectedReservation, onCheckoutS
     }
   };
 
+  const handleDaysStayedChange = (event) => {
+    const value = event.target.value === "" ? "" : parseInt(event.target.value, 10);
+    
+    // Validate that the input is a positive integer
+    if (value === "" || (Number.isInteger(value) && value > 0)) {
+      setDaysStayed(value);
+    }
+  };
+
   const handleCheckout = async () => {
+    // Validate before proceeding
+    const validationErrors = {};
+    let isValid = true;
+
+    if (!daysStayed || daysStayed < 1) {
+      validationErrors.daysStayed = "Please enter a valid number of days (minimum 1)";
+      isValid = false;
+    }
+
+    if (!paymentMode) {
+      validationErrors.paymentMode = "Please select a payment mode";
+      isValid = false;
+    }
+
+    setErrors(validationErrors);
+
+    if (!isValid) {
+      toast.error("Please fix the errors before proceeding.", { position: "bottom-center" });
+      return;
+    }
+
     try {
       // Fetch customer details based on customer_id
       const { data: customerData, error: customerError } = await supabase
@@ -77,11 +114,11 @@ const BillGenerationModal = ({ isOpen, onClose, selectedReservation, onCheckoutS
         .select("customer_name, customer_phone, customer_address")
         .eq("id", selectedReservation.customer_id)
         .single();
-  
+
       if (customerError) {
         throw customerError;
       }
-  
+
       // Insert into analytics table
       const { error: analyticsError } = await supabase
         .from("analytics")
@@ -104,11 +141,11 @@ const BillGenerationModal = ({ isOpen, onClose, selectedReservation, onCheckoutS
             kennel_numbers: selectedReservation.kennel_ids,
           },
         ]);
-  
+
       if (analyticsError) {
         throw analyticsError;
       }
-  
+
       // Insert into historical reservations table, including payment_mode
       const { error: historicalError } = await supabase
         .from("historical_reservations")
@@ -127,11 +164,11 @@ const BillGenerationModal = ({ isOpen, onClose, selectedReservation, onCheckoutS
             payment_mode: paymentMode, // Add payment mode here
           },
         ]);
-  
+
       if (historicalError) {
         throw historicalError;
       }
-  
+
       // Insert a new row into the bills table
       const { error: billError } = await supabase
         .from("bills")
@@ -148,17 +185,17 @@ const BillGenerationModal = ({ isOpen, onClose, selectedReservation, onCheckoutS
           },
         ])
         .single();
-  
+
       if (billError) {
         throw billError;
       }
-  
+
       // Update the reservation status to 'checkout'
       await supabase
         .from("reservations")
         .update({ status: "checkout" })
         .eq("id", selectedReservation.id);
-  
+
       // Update the kennel status to 'available' for the associated kennels
       await Promise.all(
         selectedReservation.kennel_ids.map((kennelId) =>
@@ -168,42 +205,43 @@ const BillGenerationModal = ({ isOpen, onClose, selectedReservation, onCheckoutS
             .eq("id", kennelId)
         )
       );
-  
+
       // Delete corresponding records from pet_information
       const { error: petInfoDeleteError } = await supabase
         .from("pet_information")
         .delete()
         .eq("reservation_id", selectedReservation.id);
-  
+
       if (petInfoDeleteError) {
         throw petInfoDeleteError;
       }
-  
+
       // Delete corresponding records from feeding_schedule
       const { error: feedingDeleteError } = await supabase
         .from("feeding_schedule")
         .delete()
-        .eq("kennel_id", selectedReservation.kennel_ids);  // Changed from reservation_id to kennel_id
-  
+        .in("kennel_id", selectedReservation.kennel_ids);  // Changed from reservation_id to kennel_id
+
       if (feedingDeleteError) {
         throw feedingDeleteError;
       }
-  
+
       // Delete the reservation record from reservations table
       const { error: deleteError } = await supabase
         .from("reservations")
         .delete()
         .eq("id", selectedReservation.id);
-  
+
       if (deleteError) {
         throw deleteError;
       }
-  
+
       // Close the modal and call the onCheckoutSuccess callback
       onClose();
       onCheckoutSuccess(); // Notify the parent component
     } catch (error) {
       console.error("Error during checkout:", error.message);
+      toast.error(`Checkout failed: ${error.message}`, { position: "bottom-center" });
     }
   };
 
@@ -233,39 +271,56 @@ const BillGenerationModal = ({ isOpen, onClose, selectedReservation, onCheckoutS
           Bill Generation
         </h2>
         <div className="flex space-x-36">
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold text-gray-700 mb-2">
-            Customer Details:
-          </h3>
-          <p className="text-gray-600">Name: {customerName}</p>
-          <p className="text-gray-600">
-            Phone: {customerDetails.customer_phone}
-          </p>
-          <p className="text-gray-600">
-            Address: {customerDetails.customer_address}
-          </p>
-          <p className="text-gray-600">
-            Pet Name: {selectedReservation.pet_name}
-          </p>
-          <p className="text-gray-600">
-            Pet Breed: {selectedReservation.pet_breed}
-          </p>
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold text-gray-700 mb-2">
+              Customer Details:
+            </h3>
+            <p className="text-gray-600">Name: {customerName}</p>
+            <p className="text-gray-600">
+              Phone: {customerDetails.customer_phone}
+            </p>
+            <p className="text-gray-600">
+              Address: {customerDetails.customer_address}
+            </p>
+            <p className="text-gray-600">
+              Pet Name: {selectedReservation.pet_name}
+            </p>
+            <p className="text-gray-600">
+              Pet Breed: {selectedReservation.pet_breed}
+            </p>
+          </div>
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold text-gray-700 mb-2">
+              Reservation Details:
+            </h3>
+            <p className="text-gray-600">
+              Check-in Date:{" "}
+              {new Date(selectedReservation.start_date).toDateString()}
+            </p>
+            <p className="text-gray-600">
+              Check-out Date:{" "}
+              {new Date(selectedReservation.end_date).toDateString()}
+            </p>
+            <div className="text-gray-600 flex items-center">
+              <span className="mr-2">Number of Days:</span>
+              <input
+                type="number"
+                min="1"
+                value={daysStayed}
+                onChange={(e) => handleDaysStayedChange(e)}
+                className={`w-20 p-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.daysStayed ? "border-red-500" : "border-gray-300"
+                }`}
+              />
+            </div>
+            {errors.daysStayed && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.daysStayed}
+              </p>
+            )}
+            <p className="text-gray-600">Advance Pay: ₹{advanceAmount}</p>
+          </div>
         </div>
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold text-gray-700 mb-2">
-            Reservation Details:
-          </h3>
-          <p className="text-gray-600">
-            Check-in Date:{" "}
-            {new Date(selectedReservation.start_date).toDateString()}
-          </p>
-          <p className="text-gray-600">
-            Check-out Date:{" "}
-            {new Date(selectedReservation.end_date).toDateString()}
-          </p>
-          <p className="text-gray-600">Number of Days: {daysStayed}</p>
-          <p className="text-gray-600">Advance Pay: ₹{advanceAmount}</p>
-        </div></div>
         <div className="mb-4">
           <label
             htmlFor="perDayBill"
@@ -309,13 +364,18 @@ const BillGenerationModal = ({ isOpen, onClose, selectedReservation, onCheckoutS
             id="paymentMode"
             value={paymentMode}
             onChange={(e) => setPaymentMode(e.target.value)}
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={`shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              errors.paymentMode ? "border-red-500" : "border-gray-300"
+            }`}
           >
             <option value="">Select Payment Mode</option>
             <option value="gpay">GPay</option>
             <option value="cash">Cash</option>
             <option value="swipe">Swipe</option>
           </select>
+          {errors.paymentMode && (
+            <p className="text-red-500 text-sm mt-1">{errors.paymentMode}</p>
+          )}
         </div>
 
         <button
