@@ -588,11 +588,13 @@ const CustomerDetailDialog = ({
                   </div>
                   <div className="mb-2 flex justify-between">
                     <span className="font-bold text-gray-600">Check In:</span>
-                    <span>{customerDetail.pets[0]?.start_date}</span>
+                   
+                    <span>{new Date(customerDetail.pets[0]?.start_date).toLocaleDateString()}</span>
                   </div>
                   <div className="mb-2 flex justify-between">
                     <span className="font-bold text-gray-600">Check Out:</span>
-                    <span>{customerDetail.pets[0]?.end_date}</span>
+            
+                    <span>{new Date(customerDetail.pets[0]?.end_date).toLocaleDateString()}</span>
                   </div>
                 </div>
                 <div className="p-4 border rounded-md bg-gray-100 text-gray-800 shadow-md">
@@ -603,19 +605,19 @@ const CustomerDetailDialog = ({
                     <span className="font-bold text-gray-600">
                       Dietary Requirements:
                     </span>
-                    <span>{customerDetail.pets[0]?.dietary_requirements || "N/A"}</span>
+                    <span>{customerDetail.pets[0]?.dietary_requirements || ""}</span>
                   </div>
                   <div className="mb-2 flex justify-between">
                     <span className="font-bold text-gray-600">
                       Special Care Instructions:
                     </span>
-                    <span>{customerDetail.pets[0]?.special_care_instructions || "N/A"}</span>
+                    <span>{customerDetail.pets[0]?.special_care_instructions || ""}</span>
                   </div>
                   <div className="mb-2 flex justify-between">
                     <span className="font-bold text-gray-600">
                       Medical Notes:
                     </span>
-                    <span>{customerDetail.pets[0]?.medical_notes || "N/A"}</span>
+                    <span>{customerDetail.pets[0]?.medical_notes || ""}</span>
                   </div>
                 </div>
               </div>
