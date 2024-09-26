@@ -7,7 +7,7 @@ import { FaCalendarAlt } from "react-icons/fa";
 import { Switch } from "@headlessui/react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from 'react-router-dom';
 
 const petBreeds = [
   "Affenpinscher",
@@ -558,7 +558,8 @@ const petBreeds = [
   "Toyger",
   "Turkish Angora",
   "Turkish Van",
-  "Ukrainian Levkoy",
+  "Šarplaninac",
+
 ];
 
 const ReservationForm = () => {
@@ -592,9 +593,9 @@ const ReservationForm = () => {
   const [searchParams] = useSearchParams();
 
   useEffect(() => {
-    const startDateParam = searchParams.get("start_date");
+    const startDateParam = searchParams.get('start_date');
     if (startDateParam) {
-      setValue("startDate", new Date(startDateParam));
+      setValue('startDate', new Date(startDateParam));
     }
   }, [searchParams, setValue]);
 
@@ -635,60 +636,58 @@ const ReservationForm = () => {
   };
 
   const fetchAvailableKennels = async () => {
-    if (!startDate || !endDate) {
-      return;
-    }
-
     // Fetch all kennels that are not under maintenance
     const { data: kennels, error: kennelError } = await supabase
       .from("kennels")
       .select("*")
       .neq("set_name", "Maintenance")
-      .order("created_at", { ascending: true });
+      .order("kennel_number", { ascending: true });
 
     if (kennelError) {
       console.error("Error fetching kennels:", kennelError.message);
       return;
     }
 
-    // Fetch overlapping reservations with status 'occupied'
+    // Fetch all current reservations overlapping with selected dates
     const { data: reservations, error: reservationError } = await supabase
       .from("reservations")
       .select("kennel_ids, start_date, end_date")
-      .eq("status", "occupied")
-      .lte("start_date", endDate.toISOString())
-      .gte("end_date", startDate.toISOString());
+      .or(`end_date.gte.${startDate.toISOString().split('T')[0]},start_date.lte.${endDate.toISOString().split('T')[0]}`);
 
     if (reservationError) {
       console.error("Error fetching reservations:", reservationError.message);
       return;
     }
 
-    const occupiedKennelIds = new Set();
-    const kennelCheckoutDates = {};
-
-    reservations.forEach((reservation) => {
-      reservation.kennel_ids.forEach((id) => {
-        occupiedKennelIds.add(id);
-        const checkoutDate = new Date(reservation.end_date);
-        if (
-          !kennelCheckoutDates[id] ||
-          checkoutDate > kennelCheckoutDates[id]
-        ) {
-          kennelCheckoutDates[id] = checkoutDate;
-        }
-      });
-    });
-
     const availableKennels = kennels.map((kennel) => {
-      const isOccupied =
-        occupiedKennelIds.has(kennel.id) || kennel.status === "occupied";
+      // Find reservations that include this kennel
+      const conflictingReservations = reservations.filter((reservation) => {
+        return reservation.kennel_ids.includes(kennel.id);
+      });
 
-      return {
-        ...kennel,
-        occupied: isOccupied,
-        checkoutDate: kennelCheckoutDates[kennel.id],
-      };
+      if (conflictingReservations.length > 0) {
+        // Assuming the latest reservation is relevant
+        const latestReservation = conflictingReservations.reduce((latest, current) => {
+          return new Date(current.end_date) > new Date(latest.end_date) ? current : latest;
+        }, conflictingReservations[0]);
+
+        return {
+          ...kennel,
+          status: kennel.status, // Use existing status
+          reservationDate:
+            kennel.status === "reserved"
+              ? new Date(latestReservation.start_date)
+              : kennel.status === "occupied"
+              ? new Date(latestReservation.end_date)
+              : null,
+        };
+      } else {
+        return {
+          ...kennel,
+          status: "available",
+          reservationDate: null,
+        };
+      }
     });
 
     setAvailableKennels(availableKennels);
@@ -707,9 +706,7 @@ const ReservationForm = () => {
 
       if (fetchCustomerError) {
         console.error("Error fetching customer:", fetchCustomerError.message);
-        toast.error("Failed to fetch customer details.", {
-          position: "bottom-center",
-        });
+        toast.error("Failed to fetch customer details.", { position: "bottom-center" });
         setLoading(false);
         return;
       }
@@ -730,9 +727,7 @@ const ReservationForm = () => {
 
         if (newCustomerError) {
           console.error("Error creating customer:", newCustomerError.message);
-          toast.error("Failed to create customer.", {
-            position: "bottom-center",
-          });
+          toast.error("Failed to create customer.", { position: "bottom-center" });
           setLoading(false);
           return;
         }
@@ -743,9 +738,7 @@ const ReservationForm = () => {
       const reservationStatus = "reserved";
 
       for (const pet of pets) {
-        const advanceAmount = data.advanceAmount
-          ? parseFloat(data.advanceAmount)
-          : 0;
+        const advanceAmount = data.advanceAmount ? parseFloat(data.advanceAmount) : 0; // Default to 0 if empty
 
         const { error: reservationError } = await supabase
           .from("reservations")
@@ -760,59 +753,57 @@ const ReservationForm = () => {
             pickup: pet.pickup,
             groom: pet.groom,
             drop: pet.drop,
-            advance_amount: advanceAmount,
-            payment_mode: data.paymentMode,
+            advance_amount: advanceAmount, // Ensure numeric value is passed
+            payment_mode: data.paymentMode, // Add payment_mode here
           });
 
         if (reservationError) {
-          console.error(
-            "Error creating reservation:",
-            reservationError.message
-          );
-          toast.error("Failed to create reservation.", {
-            position: "bottom-center",
-          });
+          console.error("Error creating reservation:", reservationError.message);
+          toast.error("Failed to create reservation.", { position: "bottom-center" });
           setLoading(false);
           return;
+        } else {
+          const { data: kennelData, error: fetchKennelError } = await supabase
+            .from("kennels")
+            .select("status")
+            .eq("id", pet.kennel.id)
+            .single();
+
+          if (fetchKennelError) {
+            console.error("Error fetching kennel status:", fetchKennelError.message);
+            toast.error("Failed to update kennel status.", { position: "bottom-center" });
+            setLoading(false);
+            return;
+          }
+
+          const currentStatus = kennelData.status;
+          let newStatus = currentStatus;
+
+          // Update status based on reservation status
+          if (reservationStatus === "reserved") {
+            newStatus = "reserved";
+          } else if (reservationStatus === "checked_out") {
+            newStatus = "available";
+          }
+
+          // Only update if the status has changed
+          if (currentStatus !== newStatus) {
+            await supabase
+              .from("kennels")
+              .update({ status: newStatus })
+              .eq("id", pet.kennel.id);
+          }
         }
       }
 
-      // Update kennel statuses
-      const kennelIdsToUpdate = selectedKennels
-        .filter((kennel) => kennel.status === "available")
-        .map((kennel) => kennel.id);
-
-      if (kennelIdsToUpdate.length > 0) {
-        const { error: updateKennelsError } = await supabase
-          .from("kennels")
-          .update({ status: "reserved" })
-          .in("id", kennelIdsToUpdate);
-
-        if (updateKennelsError) {
-          console.error(
-            "Error updating kennels:",
-            updateKennelsError.message
-          );
-          toast.error("Failed to update kennel statuses.", {
-            position: "bottom-center",
-          });
-          setLoading(false);
-          return;
-        }
-      }
-
-      toast.success("Reservation created successfully!", {
-        position: "bottom-center",
-      });
+      toast.success("Reservation created successfully!", { position: "bottom-center" });
       clearForm();
       setLoading(false);
     }
   };
 
   const toUTCDate = (date) => {
-    const utcDate = new Date(
-      Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
-    );
+    const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
     return utcDate.toISOString();
   };
 
@@ -850,15 +841,13 @@ const ReservationForm = () => {
       isValid = false;
     }
 
+  
+
     setValue("errors", newErrors);
     return isValid;
   };
 
   const handleKennelSelection = (kennel) => {
-    if (kennel.occupied) {
-      return; // Prevent selecting occupied kennels
-    }
-
     const existingPet = pets.find((pet) => pet.kennel.id === kennel.id);
     if (existingPet) {
       setCurrentPet(existingPet);
@@ -920,21 +909,9 @@ const ReservationForm = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startDate, endDate]);
 
-  // Function to format date to dd/mm/yyyy
-  const formatDate = (date) => {
-    const day = date.getDate().toString().padStart(2, "0");
-    const month = (date.getMonth() + 1).toString().padStart(2, "0"); // Months are zero-based
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
-  };
-
   return (
     <div className="max-w-screen-xl mx-auto p-6 bg-white">
-      <ToastContainer
-        position="bottom-center"
-        autoClose={3000}
-        hideProgressBar={false}
-      />
+      <ToastContainer position="bottom-center" autoClose={3000} hideProgressBar={false} />
       <h2 className="text-2xl font-bold mb-6 text-center">
         Create Reservation
       </h2>
@@ -1013,6 +990,8 @@ const ReservationForm = () => {
                 </p>
               )}
             </div>
+
+         
           </div>
 
           <div>
@@ -1032,7 +1011,7 @@ const ReservationForm = () => {
                       id="startDate"
                       selected={field.value}
                       onChange={(date) => field.onChange(date)}
-                      className={`w-full p-3 pl-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      className={`w-64  p-3 pl-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                         errors.startDate ? "border-red-500" : "border-gray-300"
                       }`}
                       dateFormat="yyyy/MM/dd"
@@ -1065,12 +1044,12 @@ const ReservationForm = () => {
                       id="endDate"
                       selected={field.value}
                       onChange={(date) => field.onChange(date)}
-                      className={`w-full p-3 pl-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      className={`w-64  p-3 pl-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                         errors.endDate ? "border-red-500" : "border-gray-300"
                       }`}
                       dateFormat="yyyy/MM/dd"
                       placeholderText="Select an end date"
-                      minDate={startDate}
+                      minDate={startDate} // Restrict to startDate or later
                     />
                   )}
                 />
@@ -1092,26 +1071,34 @@ const ReservationForm = () => {
               <input
                 type="number"
                 id="advanceAmount"
-                className="w-[50%] p-3 border rounded-md  focus:outline-none focus:ring-2 focus:ring-blue-500 border-gray-300"
+                className="w-64  p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 {...register("advanceAmount")}
+                step="0.01"
+                min="0"
               />
             </div>
-            <div className="mb-4">
+               {/* Payment Mode Select Input */}
+               <div className="mb-4">
               <label
                 htmlFor="paymentMode"
                 className="block text-sm font-medium text-gray-700"
               >
-                Advance Payment Mode
+                Payment Mode
               </label>
               <select
                 id="paymentMode"
-                className="w-[50%] p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 border-gray-300"
-                {...register("paymentMode")}
+                className={`w-64 p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.paymentMode ? "border-red-500" : "border-gray-300"
+                }`}
+                {...register("paymentMode", {
+                  // Uncomment the following line if you want to make it required
+                  // required: "Please select a payment mode",
+                })}
               >
                 <option value="">Select Payment Mode</option>
-                <option value="gpay">GPay</option>
-                <option value="cash">Cash</option>
-                <option value="swipe">Swipe</option>
+                <option value="GPay">GPay</option>
+                <option value="Cash">Cash</option>
+                <option value="Swipe">Swipe</option>
               </select>
               {errors.paymentMode && (
                 <p className="text-red-500 text-sm mt-1">
@@ -1147,26 +1134,45 @@ const ReservationForm = () => {
                     <div className="grid grid-cols-8 gap-6 ">
                       {set.kennels
                         .sort((a, b) => a.kennel_number - b.kennel_number)
-                        .map((kennel) => (
-                          <div
-                            key={kennel.id}
-                            className={`p-4 text-center rounded-md cursor-pointer transition-all aspect-square ${
-                              selectedKennels.includes(kennel)
-                                ? "bg-blue-500 text-white"
-                                : kennel.occupied
-                                ? "bg-red-500 text-white"
-                                : "bg-gray-200 hover:bg-gray-300"
-                            }`}
-                            onClick={() => handleKennelSelection(kennel)}
-                          >
-                            <div>Kennel {kennel.kennel_number}</div>
-                            {kennel.occupied && kennel.checkoutDate && (
-                              <div className="text-sm text-white mt-2">
-                                {formatDate(new Date(kennel.checkoutDate))}
+                        .map((kennel) => {
+                          // Determine color and display text based on status
+                          let bgColor = "bg-gray-200";
+                          let textColor = "text-gray-700";
+                          let displayDate = "";
+
+                          if (kennel.status === "reserved") {
+                            bgColor = "bg-yellow-500";
+                            textColor = "text-white";
+                            displayDate = `Check In: ${kennel.reservationDate.toLocaleDateString()}`;
+                          } else if (kennel.status === "occupied") {
+                            bgColor = "bg-red-500";
+                            textColor = "text-white";
+                            displayDate = `Check Out: ${kennel.reservationDate.toLocaleDateString()}`;
+                          }
+
+                          // If the kennel is selected, override colors
+                          if (selectedKennels.find((k) => k.id === kennel.id)) {
+                            bgColor = "bg-blue-500";
+                            textColor = "text-white";
+                          }
+
+                          return (
+                            <div
+                              key={kennel.id}
+                              className={`p-4 text-center rounded-md cursor-pointer transition-all aspect-square ${bgColor} ${textColor}`}
+                              onClick={() => handleKennelSelection(kennel)}
+                            >
+                              <div>
+                                Kennel {kennel.kennel_number}
                               </div>
-                            )}
-                          </div>
-                        ))}
+                              {kennel.status !== "available" && displayDate && (
+                                <div className="text-sm mt-2">
+                                  {displayDate}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                     </div>
                   </div>
                 ))}
@@ -1191,9 +1197,7 @@ const ReservationForm = () => {
           <button
             type="submit"
             className={`px-6 py-3 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              loading
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-blue-500 hover:bg-blue-600"
+              loading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600"
             }`}
             disabled={loading}
           >
@@ -1237,9 +1241,7 @@ const ReservationForm = () => {
                 value={currentPet.breed}
                 onChange={handleBreedInputChange}
                 onFocus={() => setShowBreedOptions(true)}
-                onBlur={() =>
-                  setTimeout(() => setShowBreedOptions(false), 200)
-                }
+                onBlur={() => setTimeout(() => setShowBreedOptions(false), 200)}
               />
               {showBreedOptions && (
                 <ul className="absolute z-10 w-full mt-1 bg-white border rounded-md border-gray-300 shadow-lg">
@@ -1274,9 +1276,7 @@ const ReservationForm = () => {
                     >
                       <span
                         className={`${
-                          currentPet.pickup
-                            ? "translate-x-6"
-                            : "translate-x-1"
+                          currentPet.pickup ? "translate-x-6" : "translate-x-1"
                         } inline-block h-4 w-4 transform bg-white rounded-full transition`}
                       />
                     </Switch>
@@ -1296,9 +1296,7 @@ const ReservationForm = () => {
                     >
                       <span
                         className={`${
-                          currentPet.groom
-                            ? "translate-x-6"
-                            : "translate-x-1"
+                          currentPet.groom ? "translate-x-6" : "translate-x-1"
                         } inline-block h-4 w-4 transform bg-white rounded-full transition`}
                       />
                     </Switch>
@@ -1318,9 +1316,7 @@ const ReservationForm = () => {
                     >
                       <span
                         className={`${
-                          currentPet.drop
-                            ? "translate-x-6"
-                            : "translate-x-1"
+                          currentPet.drop ? "translate-x-6" : "translate-x-1"
                         } inline-block h-4 w-4 transform bg-white rounded-full transition`}
                       />
                     </Switch>
