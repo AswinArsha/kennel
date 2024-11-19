@@ -89,24 +89,24 @@ const BillGenerationModal = ({ isOpen, onClose, selectedReservation, onCheckoutS
     // Validate before proceeding
     const validationErrors = {};
     let isValid = true;
-
+  
     if (!daysStayed || daysStayed < 1) {
       validationErrors.daysStayed = "Please enter a valid number of days (minimum 1)";
       isValid = false;
     }
-
+  
     if (!paymentMode) {
       validationErrors.paymentMode = "Please select a payment mode";
       isValid = false;
     }
-
+  
     setErrors(validationErrors);
-
+  
     if (!isValid) {
       toast.error("Please fix the errors before proceeding.", { position: "bottom-center" });
       return;
     }
-
+  
     try {
       // Fetch customer details based on customer_id
       const { data: customerData, error: customerError } = await supabase
@@ -114,11 +114,14 @@ const BillGenerationModal = ({ isOpen, onClose, selectedReservation, onCheckoutS
         .select("customer_name, customer_phone, customer_address")
         .eq("id", selectedReservation.customer_id)
         .single();
-
+  
       if (customerError) {
         throw customerError;
       }
-
+  
+      // Calculate final total bill (Total Bill + Advance Pay)
+      const finalTotalBill = totalBill + advanceAmount;
+  
       // Insert into analytics table
       const { error: analyticsError } = await supabase
         .from("analytics")
@@ -134,18 +137,18 @@ const BillGenerationModal = ({ isOpen, onClose, selectedReservation, onCheckoutS
             end_date: selectedReservation.end_date,
             days_stayed: daysStayed,
             per_day_bill: perDayBill,
-            total_bill: totalBill,
+            total_bill: finalTotalBill, // Updated to use the final total bill
             pickup: selectedReservation.pickup,
             groom: selectedReservation.groom,
             drop: selectedReservation.drop,
             kennel_numbers: selectedReservation.kennel_ids,
           },
         ]);
-
+  
       if (analyticsError) {
         throw analyticsError;
       }
-
+  
       // Insert into historical reservations table, including payment_mode
       const { error: historicalError } = await supabase
         .from("historical_reservations")
@@ -164,11 +167,11 @@ const BillGenerationModal = ({ isOpen, onClose, selectedReservation, onCheckoutS
             payment_mode: paymentMode, // Add payment mode here
           },
         ]);
-
+  
       if (historicalError) {
         throw historicalError;
       }
-
+  
       // Insert a new row into the bills table
       const { error: billError } = await supabase
         .from("bills")
@@ -181,21 +184,21 @@ const BillGenerationModal = ({ isOpen, onClose, selectedReservation, onCheckoutS
             check_in_date: selectedReservation.start_date,
             check_out_date: selectedReservation.end_date,
             per_day_bill: perDayBill,
-            total_bill: totalBill,
+            total_bill: finalTotalBill, // Updated to store the final total bill
           },
         ])
         .single();
-
+  
       if (billError) {
         throw billError;
       }
-
+  
       // Update the reservation status to 'checkout'
       await supabase
         .from("reservations")
         .update({ status: "checkout" })
         .eq("id", selectedReservation.id);
-
+  
       // Update the kennel status to 'available' for the associated kennels
       await Promise.all(
         selectedReservation.kennel_ids.map((kennelId) =>
@@ -205,37 +208,37 @@ const BillGenerationModal = ({ isOpen, onClose, selectedReservation, onCheckoutS
             .eq("id", kennelId)
         )
       );
-
+  
       // Delete corresponding records from pet_information
       const { error: petInfoDeleteError } = await supabase
         .from("pet_information")
         .delete()
         .eq("reservation_id", selectedReservation.id);
-
+  
       if (petInfoDeleteError) {
         throw petInfoDeleteError;
       }
-
+  
       // Delete corresponding records from feeding_schedule
       const { error: feedingDeleteError } = await supabase
         .from("feeding_schedule")
         .delete()
-        .in("kennel_id", selectedReservation.kennel_ids);  // Changed from reservation_id to kennel_id
-
+        .in("kennel_id", selectedReservation.kennel_ids); // Changed from reservation_id to kennel_id
+  
       if (feedingDeleteError) {
         throw feedingDeleteError;
       }
-
+  
       // Delete the reservation record from reservations table
       const { error: deleteError } = await supabase
         .from("reservations")
         .delete()
         .eq("id", selectedReservation.id);
-
+  
       if (deleteError) {
         throw deleteError;
       }
-
+  
       // Close the modal and call the onCheckoutSuccess callback
       onClose();
       onCheckoutSuccess(); // Notify the parent component
@@ -244,6 +247,7 @@ const BillGenerationModal = ({ isOpen, onClose, selectedReservation, onCheckoutS
       toast.error(`Checkout failed: ${error.message}`, { position: "bottom-center" });
     }
   };
+  
 
   return (
     <Modal
